@@ -32,19 +32,21 @@ export default async function DashboardPage() {
     .select("lesson_id, lessons!inner(course_id)")
     .eq("user_id", user?.id);
 
-  const visibleCourses = courses?.filter((course) => {
-    if (!course.is_private) return true;
+  const visibleCourses =
+    courses?.filter((course) => {
+      if (!course.is_private) return true;
 
-    return course.course_access?.some(
-      (access: any) => access.user_email.toLowerCase() === userEmail
-    );
-  }) || [];
+      return course.course_access?.some(
+        (access: any) => access.user_email.toLowerCase() === userEmail,
+      );
+    }) || [];
 
   const processedCourses = visibleCourses.map((course) => {
     const totalLessons = course.lessons?.length || 0;
 
     const completedInThisCourse =
-      userProgress?.filter((p: any) => p.lessons?.course_id === course.id).length || 0;
+      userProgress?.filter((p: any) => p.lessons?.course_id === course.id)
+        .length || 0;
 
     const progressPercent =
       totalLessons > 0
@@ -66,89 +68,102 @@ export default async function DashboardPage() {
   const completedCourses = processedCourses.filter((c) => c.isFulllyCompleted);
 
   const CourseCard = ({ course }: { course: any }) => (
-    <div className="group relative border-2 border-black bg-white p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all">
+    <div className="group relative bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all">
       {course.is_private && (
-        <div className="absolute -top-3 -right-3 bg-red-600 text-white p-2 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10" title="Private Access Granted">
+        <div
+          className="absolute top-4 right-4 text-slate-400"
+          title="Private Access"
+        >
           <Lock size={14} />
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono bg-rebus-purple text-white px-2 py-0.5 uppercase">
+          <span
+            className={`text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+              course.isFullyCompleted
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-slate-100 text-slate-600"
+            }`}
+          >
             {course.isFulllyCompleted
               ? "Status: Completed"
               : `Progress: ${course.progressPercent}%`}
           </span>
-          <div className="flex items-center gap-2 text-zinc-400">
+          <div className="flex items-center gap-1.5 text-slate-400">
             <Clock size={12} />
-            <span className="text-[10px] font-black uppercase">
+            <span className="text-[11px] font-semibold">
               {course.estimatedTime} MIN
             </span>
           </div>
         </div>
 
-        <h4 className="text-2xl font-black uppercase tracking-tight group-hover:underline leading-none">
+        <h4 className="text-xl font-semibold text-slate-900 group-hover:text-rebus-blue transition-colors leading-tight">
           {course.title}
         </h4>
 
+        <p className="mt-2 text-slate-500 text-sm leading-relaxed line-clamp-2">
+          {course.description || "Module description is not available."}
+        </p>
+
         {!course.isFulllyCompleted && (
-          <div className="h-2 w-full bg-rebus-purple border border-rebus-purple overflow-hidden">
+          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-rebus-purple transition-all duration-500"
+              className="h-full bg-rebus-blue transition-all duration-700 ease-out" 
               style={{ width: `${course.progressPercent}%` }}
             />
           </div>
         )}
 
-        <p className="text-zinc-500 text-sm italic line-clamp-2">
-          {course.description || "System initialization complete."}
-        </p>
-
         <Link
           href={`/dashboard/courses/${course.id}`}
-          className={`flex items-center justify-center gap-2 w-full py-4 font-black uppercase text-xs tracking-widest transition-all border-2 border-rebus-blue shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] ${
+          className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-semibold text-sm transition-all ${
             course.isFulllyCompleted
-              ? "bg-white text-black hover:bg-zinc-50"
-              : "bg-rebus-blue text-white hover:bg-white hover:text-black"
+              ? "bg-slate-50 text-slate-600 hover:bg-slate-100"
+              : "bg-rebus-blue text-white hover:bg-[#0096d1] shadow-sm shadow-rebus-blue/20"
           }`}
         >
           {course.isFulllyCompleted ? "Review Content" : "Continue Course"}{" "}
-          <ArrowRight size={14} />
+          <ArrowRight size={16} />
         </Link>
       </div>
     </div>
   );
 
   return (
-    <div className="space-y-12">
-      <header className="flex justify-between items-end border-b-4 border-black pb-6">
-        <div className="space-y-1">
-          <h2 className="text-4xl font-black uppercase tracking-tighter text-black">
-            MY LEARNING
+    <div className="max-w-5xl mx-auto space-y-12">
+      <header className="space-y-2 border-b border-slate-200 pb-8">
+          <h2 className="text-3xl font-bold sentence-case tracking-tighter text-black">
+            My Learning
           </h2>
-          <p className="text-xs font-mono text-zinc-400 tracking-widest uppercase">
-            {user?.email} // {activeCourses.length} ACTIVE //{" "}
-            {completedCourses.length} COMPLETED
-          </p>
-        </div>
+          <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
+            <span>{user?.email}</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-900">{activeCourses.length} Active</span>
+            <span className="text-slate-300">•</span>
+            <span>{completedCourses.length} Completed</span>
+          </div>
       </header>
 
       {/* ACTIVE COURSES */}
       <section className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Activity size={16} />
-          <h3 className="text-sm font-black uppercase tracking-widest italic">
+        <div className="flex items-center gap-2 text-slate-900">
+          <Activity size={18} className="text-rebus-blue" />
+          <h3 className="font-semibold text-base">
             In-Progress Courses
           </h3>
         </div>
 
         {activeCourses.length === 0 ? (
-          <div className="border-2 border-dashed border-black p-12 text-center text-zinc-400 font-bold uppercase italic bg-zinc-50">
-            No active training detected. Select a course below to begin.
+          <div className='rounded-xl border border-dashed border-slate-200 p-16 text-center'>
+            <p className="text-slate-400 text-sm font-medium">No active training detected.</p>
+            <Link href="/dashboard/courses" className='text-rebus-blue text-sm font-bold hover:underline mt-2 inline-block'>
+              Browse Courses →
+            </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {activeCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
@@ -158,14 +173,14 @@ export default async function DashboardPage() {
 
       {/* COMPLETED COURSES */}
       {completedCourses.length > 0 && (
-        <section className="space-y-6 pt-6">
-          <div className="flex items-center gap-2 text-green-600">
-            <CheckCircle size={16} />
-            <h3 className="text-sm font-black uppercase tracking-widest italic">
+        <section className="space-y-6">
+          <div className="flex items-center gap-2 text-green-900">
+            <CheckCircle size={18} />
+            <h3 className="font-semibold text-base">
               COMPLETED COURSES
             </h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-80">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 opacity-80">
             {completedCourses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
@@ -173,9 +188,9 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <footer className="pt-10 border-t-2 border-black flex justify-between items-center opacity-30">
-        <p className="text-[9px] font-mono uppercase">
-          REBUS LMS // 2026
+      <footer className="pt-12 border-t border-slate-200 flex justify-between items-center opacity-50">
+        <p className="text-[11px] font-medium text-slate-400 tracking-wider">
+          © 2026 REBUS HOLDINGS
         </p>
       </footer>
     </div>

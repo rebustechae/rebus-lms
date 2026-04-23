@@ -1,13 +1,22 @@
-import { Search } from "lucide-react";
+import { Search, UserCog, Mail, Calendar, ShieldCheck, Filter } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import UserRow from "./UserRow";
+import SearchInput from "@/app/(admin)/admin/_components/SearchInput";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Manage Users | Rebus LMS Admin Dashboard",
+  title: "User Directory | Rebus Admin",
 };
 
-export default async function AdminUsersPage() {
+// 1. Add searchParams to the function arguments
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ query?: string }>;
+}) {
+  // 2. Resolve the query string
+  const query = (await searchParams).query?.toLowerCase() || "";
+
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -19,86 +28,131 @@ export default async function AdminUsersPage() {
     },
   );
 
-  const { data: users, error } = await supabaseAdmin
+  const { data: users } = await supabaseAdmin
     .from("profiles")
-    .select(
-      `
+    .select(`
       id,
       email,
       role,
       created_at,
       course_completions(count)
-    `,
-    )
+    `)
     .order("created_at", { ascending: false });
 
-  return (
-    <div className="space-y-10">
-      {/* Header */}
-      <header className="flex justify-between items-end border-b-4 border-black pb-6">
-        <div className="space-y-1">
-          <h2 className="text-4xl font-black uppercase tracking-tighter">
-            Manage Users
-          </h2>
-          <p className="text-xs font-mono text-zinc-400">
-            {users?.length || 0} TOTAL USERS
-          </p>
-        </div>
-      </header>
+  // 3. FILTER LOGIC: Filter the users list based on the search query
+  const filteredUsers = users?.filter((user: any) => {
+    return (
+      user.email.toLowerCase().includes(query) ||
+      user.role.toLowerCase().includes(query)
+    );
+  });
 
-      {/* Search/Filter Bar (Visual Placeholder) */}
-      <div className="relative group">
-        <Search
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-black transition-colors"
-          size={18}
-        />
-        <input
-          type="text"
-          placeholder="Filter by email or role..."
-          className="w-full border-2 border-black p-4 pl-12 font-bold uppercase text-xs tracking-widest outline-none focus:bg-zinc-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:shadow-none transition-all"
-        />
+  const { data: courseProgress } = await supabaseAdmin
+    .from("user_progress")
+    .select(`
+      user_id,
+      course_id,
+      courses(id, title),
+      lessons(id, course_id)
+    `);
+
+  const userProgressMap = new Map();
+  courseProgress?.forEach((progress: any) => {
+    if (!userProgressMap.has(progress.user_id)) {
+      userProgressMap.set(progress.user_id, []);
+    }
+    const coursesArray = userProgressMap.get(progress.user_id);
+    const existingCourse = coursesArray.find((c: any) => c.id === progress.course_id);
+    if (!existingCourse && progress.courses) {
+      coursesArray.push({
+        id: progress.courses.id,
+        title: progress.courses.title,
+      });
+    }
+  });
+
+  const { data: allLessons } = await supabaseAdmin
+    .from("lessons")
+    .select("id, course_id");
+
+  const courseLessonsMap: Record<string, string[]> = {};
+  allLessons?.forEach((lesson: any) => {
+    if (!courseLessonsMap[lesson.course_id]) {
+      courseLessonsMap[lesson.course_id] = [];
+    }
+    courseLessonsMap[lesson.course_id].push(lesson.id);
+  });
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-8 pb-12">
+      {/* ENTERPRISE HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-200 pb-8">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Personnel Directory</h2>
+          <p className="text-slate-500 text-sm mt-1 font-medium">Review employee engagement, modify access levels, and track completions.</p>
+        </div>
+        <div className="flex items-center gap-3">
+            <div className="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-slate-200">
+                {users?.length || 0} Registered Users
+            </div>
+        </div>
       </div>
 
-      {/* User Table */}
-      <div className="border-2 border-black bg-white overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      {/* FILTER BAR */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <SearchInput />
+      </div>
+
+      {/* USER TABLE CONTAINER */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b-2 border-black bg-zinc-50">
-              <th className="p-4 text-[10px] font-black uppercase tracking-widest border-r-2 border-black">
-                Employee
+            <tr className="bg-slate-50/50 border-b border-slate-200">
+              <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="flex items-center gap-2"><Mail size={14} /> Employee</div>
               </th>
-              <th className="p-4 text-[10px] font-black uppercase tracking-widest border-r-2 border-black">
-                Access Level
+              <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="flex items-center gap-2"><UserCog size={14} /> Authority</div>
               </th>
-              <th className="p-4 text-[10px] font-black uppercase tracking-widest text-center border-r-2 border-black">
-                Completions
+              <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">
+                <div className="flex items-center justify-center gap-2"><ShieldCheck size={14} /> Progress</div>
               </th>
-              <th className="p-4 text-[10px] font-black uppercase tracking-widest text-right">
-                Joined
+              <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">
+                <div className="flex items-center justify-end gap-2"><Calendar size={14} /> Actions</div>
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y-2 divide-black">
-            {!users || users.length === 0 ? (
+          <tbody className="divide-y divide-slate-100">
+            {/* 5. Map over filteredUsers instead of users */}
+            {!filteredUsers || filteredUsers.length === 0 ? (
               <tr>
-                <td
-                  colSpan={4}
-                  className="p-20 text-center text-zinc-400 italic font-bold uppercase"
-                >
-                  No users found in the system.
+                <td colSpan={4} className="p-20 text-center text-slate-400 font-medium italic">
+                  {query ? `No records matching "${query}"` : "No active personnel records found."}
                 </td>
               </tr>
             ) : (
-              users.map((user: any) => (
-                <UserRow key={user.id} user={user} />
-              ))
+              filteredUsers.map((user: any) => {
+                const userCourses = userProgressMap.get(user.id) || [];
+                return (
+                  <UserRow 
+                    key={user.id} 
+                    user={user} 
+                    courseProgress={userCourses}
+                    courseLessonsMap={courseLessonsMap}
+                    courseProgressByUser={courseProgress || []}
+                  />
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
-      <footer className="opacity-30 text-[9px] font-mono uppercase italic">
-        Caution: Role modifications impact system-wide visibility.
+      <footer className="flex items-center gap-2 px-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none">
+          Notice: Role elevation requires administrative override.
+        </p>
       </footer>
     </div>
   );

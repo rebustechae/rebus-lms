@@ -4,7 +4,8 @@ import { useState, useEffect, use } from "react";
 import { createClient } from "@/utils/supabase/client";
 import confetti from "canvas-confetti";
 import { useRouter } from "next/navigation";
-import { XCircle, RefreshCcw, BookOpen } from "lucide-react";
+import { XCircle, RefreshCcw, CheckCircle2, Award, ChevronRight, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function FinalCourseQuiz({
   params: paramsPromise,
@@ -21,6 +22,14 @@ export default function FinalCourseQuiz({
 
   useEffect(() => {
     async function fetchQuiz() {
+      const sessionKey = `quiz_order_${params.id}`;
+      const savedOrder = sessionStorage.getItem(sessionKey);
+
+      if (savedOrder) {
+        setQuestions(JSON.parse(savedOrder));
+        return; 
+      }
+
       const { data } = await supabase
         .from("quizzes")
         .select("*")
@@ -33,15 +42,15 @@ export default function FinalCourseQuiz({
             options: [...q.options].sort(() => Math.random() - 0.5),
           }))
           .sort(() => Math.random() - 0.5);
-
+        sessionStorage.setItem(sessionKey, JSON.stringify(randomizedData));
         setQuestions(randomizedData);
       }
     }
     fetchQuiz();
   }, [params.id, supabase]);
-  
+
   const calculateResults = async () => {
-    if (questions.length === 0) return;
+    if (questions.length === 0 || Object.keys(answers).length < questions.length) return;
 
     let correct = 0;
     questions.forEach((q, idx) => {
@@ -58,13 +67,11 @@ export default function FinalCourseQuiz({
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ["#000000", "#fbbf24", "#ffffff"],
+          colors: ["#00ADEF", "#662D91", "#FFFFFF"],
         });
       }, 200);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from("course_completions").upsert({
           user_id: user.id,
@@ -80,36 +87,33 @@ export default function FinalCourseQuiz({
     const radius = 70;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (score / 100) * circumference;
+    const isPass = score >= 90;
 
     return (
       <div className="relative flex items-center justify-center w-48 h-48 mx-auto">
         <svg className="w-full h-full transform -rotate-90">
           <circle
-            cx="96"
-            cy="96"
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="12"
+            cx="96" cy="96" r={radius}
+            stroke="currentColor" strokeWidth="10"
             fill="transparent"
-            className="text-zinc-100"
+            className="text-slate-100"
           />
           <circle
-            cx="96"
-            cy="96"
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="12"
+            cx="96" cy="96" r={radius}
+            stroke="currentColor" strokeWidth="10"
             fill="transparent"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            className={`transition-all duration-1000 ${score >= 90 ? "text-black" : "text-red-500"}`}
+            className={`transition-all duration-1000 ${isPass ? "text-[#662D91]" : "text-rose-500"}`}
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className="text-4xl font-black">{score}%</span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-            Final Grade
+          <span className={`text-4xl font-bold tracking-tighter ${isPass ? "text-[#662D91]" : "text-rose-600"}`}>
+            {score}%
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+            Achievement
           </span>
         </div>
       </div>
@@ -118,84 +122,79 @@ export default function FinalCourseQuiz({
 
   if (questions.length === 0)
     return (
-      <div className="p-20 font-black">No quiz deployed for this course.</div>
+      <div className="min-h-screen flex items-center justify-center text-slate-400 font-medium">
+        Establishing connection to server...
+      </div>
     );
 
   return (
-    <div className="max-w-3xl mx-auto py-10 space-y-10">
-      <header className="border-b-4 border-black pb-6 flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter italic">
+    <div className="max-w-3xl mx-auto py-16 px-6 space-y-12">
+      <header className="flex justify-between items-end border-b border-slate-100 pb-8">
+        <div className="space-y-1">
+          <Link href={`/dashboard/courses/${params.id}`} className="flex items-center gap-2 text-xs font-bold text-[#00ADEF] mb-4 hover:underline">
+            <ArrowLeft size={14} /> EXIT TO SYLLABUS
+          </Link>
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
             Final Assessment
           </h1>
-          <p className="text-sm font-bold text-zinc-500 italic">
-            90% Score Required to Pass (Open Book)
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-            Question Count
-          </p>
-          <p className="text-2xl font-mono font-bold">{questions.length}</p>
         </div>
       </header>
 
       {submitted ? (
-        <div className="p-12 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-center space-y-8 bg-white">
-          {/* THE NEW RING UI */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-12 shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
           <ScoreRing score={finalScore} />
 
-          <div className="space-y-2">
-            <h2 className="text-4xl font-black uppercase italic tracking-tighter">
-              {finalScore >= 90
-                ? "Verification Successful"
-                : "Verification Failed"}
+          <div className="space-y-3">
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+              {finalScore >= 90 ? "Certification Validated" : "Incomplete Validation"}
             </h2>
-            <p className="font-bold text-zinc-500 max-w-sm mx-auto">
+            <p className="text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
               {finalScore >= 90
-                ? "You have demonstrated mastery of the curriculum and are now certified."
-                : "You did not meet the 90% threshold required for certification."}
+                ? "You have successfully demonstrated mastery of the course."
+                : "The passing score for this assessment is 90%. Please review the course materials and attempt the assessment again."}
             </p>
           </div>
 
-          <div className="flex flex-col gap-4 pt-4">
+          <div className="flex flex-col gap-3 pt-6">
             {finalScore < 90 ? (
               <button
-                onClick={() => setSubmitted(false)}
-                className="flex items-center justify-center gap-2 w-full bg-black text-white py-4 font-black uppercase hover:bg-zinc-800 transition-all shadow-[4px_4px_0px_0px_rgba(239,68,68,1)]"
+                onClick={() => { setSubmitted(false); setAnswers({}); }}
+                className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
               >
-                <RefreshCcw size={18} /> Retry Assessment
+                <RefreshCcw size={18} /> Re-attempt Assessment
               </button>
             ) : (
               <button
                 onClick={() => router.push("/dashboard")}
-                className="w-full bg-black text-white py-4 font-black uppercase hover:bg-zinc-800 transition-all shadow-[4px_4px_0px_0px_rgba(34,197,94,1)]"
+                className="flex items-center justify-center gap-2 w-full bg-[#662D91] text-white py-4 rounded-2xl font-bold hover:bg-[#522475] transition-all shadow-lg shadow-purple-200"
               >
-                Return to Dashboard
+                <Award size={18} /> View My Dashboard
               </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="space-y-12">
+        <div className="space-y-16">
           {questions.map((q, idx) => (
-            <div
-              key={q.id}
-              className="space-y-4 border-l-4 border-zinc-100 pl-6 focus-within:border-black transition-all"
-            >
-              <p className="text-xl font-bold uppercase tracking-tight">
-                <span className="text-zinc-300 mr-2">#{idx + 1}</span>{" "}
-                {q.question}
-              </p>
-              <div className="grid gap-2">
+            <div key={q.id} className="group space-y-6">
+              <div className="flex items-start gap-4">
+                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400 group-focus-within:bg-[#00ADEF] group-focus-within:text-white transition-colors">
+                  {idx + 1}
+                </span>
+                <p className="text-xl font-semibold text-slate-800 pt-1 leading-snug">
+                  {q.question}
+                </p>
+              </div>
+              
+              <div className="grid gap-3 pl-12">
                 {q.options.map((opt: string) => (
                   <button
                     key={opt}
                     onClick={() => setAnswers({ ...answers, [idx]: opt })}
-                    className={`p-4 text-left font-bold border-2 transition-all ${
+                    className={`p-4 text-left text-sm font-semibold rounded-xl border-2 transition-all ${
                       answers[idx] === opt
-                        ? "bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                        : "hover:bg-zinc-50 border-zinc-200"
+                        ? "bg-slate-50 border-[#00ADEF] text-[#00ADEF] ring-4 ring-cyan-50"
+                        : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
                     }`}
                   >
                     {opt}
@@ -205,12 +204,21 @@ export default function FinalCourseQuiz({
             </div>
           ))}
 
-          <button
-            onClick={calculateResults}
-            className="w-full bg-black text-white py-6 font-black uppercase tracking-widest shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all"
-          >
-            Submit Assessment
-          </button>
+          <div className="pt-10 border-t border-slate-100">
+            <button
+              disabled={Object.keys(answers).length < questions.length}
+              onClick={calculateResults}
+              className={`w-full py-5 rounded-2xl font-bold text-lg tracking-wide transition-all flex items-center justify-center gap-2
+                ${Object.keys(answers).length === questions.length
+                  ? "bg-[#00ADEF] text-white hover:bg-[#0096d1] shadow-xl shadow-cyan-500/20"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+            >
+              Submit Final Assessment <ChevronRight size={20} />
+            </button>
+            <p className="text-center text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-6">
+              &copy; 2026 Rebus Holdings
+            </p>
+          </div>
         </div>
       )}
     </div>

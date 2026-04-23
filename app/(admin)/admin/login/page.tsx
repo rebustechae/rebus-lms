@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { ShieldCheck, LockKeyhole } from "lucide-react";
+import { ShieldCheck, LockKeyhole, ArrowRight, Fingerprint } from "lucide-react";
 
 export default function AdminLoginPage({
   searchParams,
@@ -20,63 +20,79 @@ export default function AdminLoginPage({
     });
 
     if (error) {
-      return redirect("/admin/login?message=UNAUTHORIZED_ACCESS_DENIED");
+      return redirect("/admin/login?message=AUTHENTICATION_FAILURE_DENIED");
     }
 
-    // After login, we send them to the admin dashboard
     return redirect("/admin");
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 flex flex-col items-center justify-center p-6">
-      <form action={adminSignIn} className="w-full max-w-md space-y-4">
-        <div className="bg-white border-4 border-black p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
-          <div className="flex flex-col items-center text-center mb-8 space-y-2">
-            <div className="bg-black text-white p-3 mb-2">
-              <ShieldCheck size={32} />
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Subtle Background Decoration */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-100/30 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-100/30 rounded-full blur-[120px]" />
+
+      <form action={adminSignIn} className="w-full max-w-[440px] z-10">
+        <div className="bg-white border border-slate-200 rounded-[32px] p-10 shadow-xl shadow-slate-200/50">
+          
+          {/* BRANDING HEADER */}
+          <div className="flex flex-col items-center text-center mb-10">
+            <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-slate-200">
+              <ShieldCheck size={32} strokeWidth={1.5} />
             </div>
-            <h1 className="text-3xl font-black uppercase italic tracking-tighter">Admin Gateway</h1>
-            <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Secure encrypted channel // Level 4 Clearances</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Admin Login</h1>
           </div>
 
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase">Operative Email</label>
+          {/* INPUT FIELDS */}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1">Email</label>
               <input
                 name="email"
                 type="email"
                 required
-                className="w-full border-2 border-black p-3 font-mono text-sm focus:bg-zinc-50 outline-none"
-                placeholder="admin@rebus.com"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all"
+                placeholder="admin@rebus.ae"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase">Security Key</label>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Password</label>
+              </div>
               <input
                 name="password"
                 type="password"
                 required
-                className="w-full border-2 border-black p-3 font-mono text-sm focus:bg-zinc-50 outline-none"
-                placeholder="••••••••"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all"
+                placeholder="••••••••••••"
               />
             </div>
 
-            <button className="w-full bg-black text-white py-4 font-black uppercase text-sm flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1">
-              <LockKeyhole size={16} /> Authenticate
+            <button className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 group mt-4">
+              <LockKeyhole size={18} /> 
+              Sign-in
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
 
+          {/* ERROR HANDLING */}
           {searchParams?.message && (
-            <div className="mt-6 p-3 bg-red-50 border-2 border-red-600 text-red-600 text-[10px] font-black uppercase text-center">
-              {searchParams.message}
+            <div className="mt-8 p-4 bg-red-50 rounded-xl border border-red-100 flex items-center gap-3">
+              <Fingerprint size={20} className="text-red-400" />
+              <p className="text-[10px] font-bold text-red-600 uppercase leading-tight tracking-tight">
+                {searchParams.message.replace(/_/g, ' ')}
+              </p>
             </div>
           )}
         </div>
         
-        <p className="text-center text-[10px] font-mono text-zinc-400 uppercase">
-          Attempting unauthorized access is a violation of protocol.
-        </p>
+        <div className="mt-8 text-center space-y-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">
+              Authorized Personnel Only
+            </p>
+            <div className="h-px w-12 bg-slate-200 mx-auto" />
+        </div>
       </form>
     </div>
   );

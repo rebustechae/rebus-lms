@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { UserPlus, X, Mail } from 'lucide-react'
+import { UserPlus, X, Mail, Loader2, ShieldCheck } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function WhitelistManager({ 
@@ -28,7 +28,9 @@ export default function WhitelistManager({
       .from('course_access')
       .insert([{ course_id: courseId, user_email: email.toLowerCase() }])
 
-    if (!error) {
+    if (error) {
+      alert("Registry Error: User could not be added to the whitelist.")
+    } else {
       setEmail('')
       router.refresh()
     }
@@ -45,48 +47,71 @@ export default function WhitelistManager({
   }
 
   return (
-    <div className={`space-y-4 transition-opacity ${!isPrivate ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-      <form onSubmit={addEmail} className="flex gap-2">
-        <div className="relative flex-1">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={14} />
+    <div className={`space-y-6 transition-all duration-300 ${!isPrivate ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
+      
+      {/* INPUT SECTION */}
+      <form onSubmit={addEmail} className="flex gap-3">
+        <div className="relative flex-1 group">
+          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#00ADEF] transition-colors" size={16} />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="employee@rebus.ae"
-            className="w-full border-2 border-black p-3 pl-10 font-bold text-xs outline-none focus:bg-zinc-50"
+            placeholder="Enter personnel email address..."
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pl-11 text-sm font-medium outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all"
           />
         </div>
         <button 
           type="submit"
-          disabled={loading}
-          className="bg-black text-white px-6 font-black text-[10px] uppercase hover:bg-zinc-800 transition-all border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          disabled={loading || !email}
+          className="bg-slate-900 text-white px-6 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all flex items-center gap-2 shrink-0 shadow-sm"
         >
-          {loading ? 'Adding...' : 'Grant Access'}
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
+          Grant Access
         </button>
       </form>
 
-      <div className="flex flex-wrap gap-2">
-        {initialWhitelist.length === 0 && (
-          <p className="text-[10px] font-bold text-zinc-400 italic uppercase">No users whitelisted yet.</p>
-        )}
-        {initialWhitelist.map((item) => (
-          <div key={item.id} className="flex items-center gap-2 bg-white border-2 border-black px-3 py-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-            <span className="text-[10px] font-black uppercase tracking-tight">{item.user_email}</span>
-            <button 
-              onClick={() => removeEmail(item.id)}
-              className="text-red-600 hover:scale-125 transition-transform"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
+      {/* WHITELIST ENTRIES */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Authorized Personnel</span>
+            <span className="text-[10px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">{initialWhitelist.length} Units</span>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {initialWhitelist.length === 0 ? (
+            <div className="w-full p-8 border border-dashed border-slate-200 rounded-2xl text-center">
+                <p className="text-xs font-medium text-slate-400">Registry is currently empty.</p>
+            </div>
+          ) : (
+            initialWhitelist.map((item) => (
+              <div 
+                key={item.id} 
+                className="flex items-center gap-3 bg-white border border-slate-200 pl-3 pr-2 py-1.5 rounded-lg shadow-sm hover:border-[#00ADEF]/30 transition-colors group"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-xs font-bold text-slate-700">{item.user_email}</span>
+                <button 
+                  onClick={() => removeEmail(item.id)}
+                  className="p-1 rounded-md text-slate-300 hover:text-red-600 hover:bg-red-50 transition-all"
+                  title="Revoke Access"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
       
+      {/* STATUS OVERRIDE NOTICE */}
       {!isPrivate && (
-        <p className="text-[10px] font-black text-red-600 uppercase">
-          Note: This list is ignored while Course is in Public Mode.
-        </p>
+        <div className="flex items-center gap-2 bg-slate-100 p-3 rounded-lg border border-slate-200">
+          <ShieldCheck size={14} className="text-slate-400" />
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+            System Note: Whitelist is inactive. Course visibility is set to <span className="text-[#00ADEF]">Public</span>.
+          </p>
+        </div>
       )}
     </div>
   )

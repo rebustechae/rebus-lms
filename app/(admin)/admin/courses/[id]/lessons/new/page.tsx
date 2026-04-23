@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, use } from 'react' // 1. Added use here
+import { useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ChevronLeft, Save, Loader2, BookOpen, Hash, FileText } from 'lucide-react'
 
-// 2. Update the type to reflect that params is a Promise
 export default function NewLessonPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
-  // 3. Unwrap the params here
   const resolvedParams = use(params)
   const courseId = resolvedParams.id
 
@@ -22,14 +20,14 @@ export default function NewLessonPage({ params }: { params: Promise<{ id: string
     const formData = new FormData(e.currentTarget)
     
     const { error } = await supabase.from('lessons').insert({
-      course_id: courseId, // Use the unwrapped ID
+      course_id: courseId,
       title: formData.get('title'),
       content: formData.get('content'),
       order_index: parseInt(formData.get('order') as string) || 0,
     })
 
     if (error) {
-      alert(error.message)
+      alert(`Deployment Error: ${error.message}`)
       setLoading(false)
     } else {
       router.push(`/admin/courses/${courseId}`)
@@ -38,42 +36,84 @@ export default function NewLessonPage({ params }: { params: Promise<{ id: string
   }
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-xs font-bold hover:underline">
-        <ArrowLeft size={14} /> DISCARD AND RETURN
+    <div className="max-w-4xl mx-auto space-y-8 pb-20 px-4">
+      {/* NAVIGATION */}
+      <button 
+        onClick={() => router.back()} 
+        className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#00ADEF] transition-colors group"
+      >
+        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
+        Discard and Return
       </button>
 
-      {/* ... the rest of your form remains exactly the same ... */}
-      <form onSubmit={handleSubmit} className="space-y-6 border-2 border-black p-8 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-        <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-zinc-400">Lesson Metadata</label>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="col-span-3">
-              <input name="title" required placeholder="LESSON TITLE" className="w-full border-2 border-black p-3 font-bold focus:bg-zinc-50 outline-none" />
+      {/* HEADER */}
+      <header className="border-b border-slate-200 pb-6">
+        <h2 className="text-4xl font-bold text-slate-900 tracking-tight">New Lesson Entry</h2>
+        <p className="text-slate-500 mt-1 font-medium italic">Constructing core curriculum for course ID: {courseId.split('-')[0]}</p>
+      </header>
+
+      {/* FORM */}
+      <form onSubmit={handleSubmit} className="space-y-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+        
+        {/* METADATA SECTION */}
+        <div className="space-y-4">
+          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <Hash size={14} className="text-[#00ADEF]" /> Lesson Metadata
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-3 group">
+              <input 
+                name="title" 
+                required 
+                placeholder="LESSON TITLE (e.g., Introduction to Safety Protocols)" 
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
+              />
             </div>
-            <div>
-              <input name="order" type="number" placeholder="ORDER (e.g. 1)" className="w-full border-2 border-black p-3 font-bold focus:bg-zinc-50 outline-none" />
+            <div className="group">
+              <input 
+                name="order" 
+                type="number" 
+                required
+                placeholder="LESSON #" 
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
+              />
             </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-zinc-400">Lesson Body (Text/Content)</label>
-          <textarea 
-            name="content" 
-            required 
-            rows={15} 
-            className="w-full border-2 border-black p-4 font-mono text-sm focus:bg-zinc-50 outline-none resize-none"
-            placeholder="Paste or type your lesson content here..."
-          />
+        {/* CONTENT SECTION */}
+        <div className="space-y-4">
+          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <FileText size={14} className="text-[#00ADEF]" /> Instructional Content
+          </label>
+          <div className="relative group">
+            <textarea 
+                name="content" 
+                required 
+                rows={15} 
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-6 font-mono text-sm leading-relaxed text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all resize-none shadow-inner"
+                placeholder="Enter instructional text, Markdown, or technical documentation..."
+            />
+            <div className="absolute bottom-4 right-4 pointer-events-none text-[10px] font-bold text-slate-300 uppercase tracking-widest bg-white/80 px-2 py-1 rounded border">
+                Draft Mode Active
+            </div>
+          </div>
         </div>
 
+        {/* SUBMIT BUTTON */}
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full bg-black text-white p-4 font-black uppercase tracking-widest hover:invert transition-all flex justify-center items-center gap-2"
+          className="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all flex justify-center items-center gap-3 shadow-lg shadow-slate-200 group"
         >
-          <Save size={18} /> {loading ? 'SAVING...' : 'COMMIT LESSON TO REGISTRY'}
+          {loading ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : (
+            <>
+              <Save size={18} /> 
+              Add Lesson to Course
+            </>
+          )}
         </button>
       </form>
     </div>

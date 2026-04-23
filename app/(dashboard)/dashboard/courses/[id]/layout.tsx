@@ -1,80 +1,127 @@
-import { createClient } from "@/utils/supabase/server"
-import Link from "next/link"
-import { CheckCircle2, Circle, BookOpen } from "lucide-react"
+import { createClient } from "@/utils/supabase/server";
+import Link from "next/link";
+import { CheckCircle2, Circle, BookOpen, Lock } from "lucide-react";
 
-export default async function CourseLayout({ 
-  children, 
-  params 
-}: { 
-  children: React.ReactNode, 
-  params: Promise<{ id: string }> 
+export const dynamic = "force-dynamic";
+
+export default async function CourseLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = await createClient()
-  const { id } = await params
-  
-  // 1. Fetch lessons
+  const supabase = await createClient();
+  const { id } = await params;
+
   const { data: lessons } = await supabase
-    .from('lessons')
-    .select('id, title, order_index')
-    .eq('course_id', id)
-    .order('order_index', { ascending: true })
+    .from("lessons")
+    .select("id, title, order_index")
+    .eq("course_id", id)
+    .order("order_index", { ascending: true });
 
-  // 2. Get current user's progress
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  
   const { data: progress } = await supabase
-    .from('user_progress')
-    .select('lesson_id')
-    .eq('user_id', user?.id)
+    .from("user_progress")
+    .select("lesson_id")
+    .eq("user_id", user?.id);
 
-  const completedIds = new Set(progress?.map(p => p.lesson_id))
+  const completedIds = new Set(progress?.map((p) => p.lesson_id));
 
-  // 3. Check if ALL lessons are finished
-  const allLessonsCompleted = lessons && lessons.length > 0 
-    ? lessons.every(l => completedIds.has(l.id)) 
-    : false
+  const allLessonsCompleted =
+    lessons && lessons.length > 0
+      ? lessons.every((l) => completedIds.has(l.id))
+      : false;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen gap-8">
       {/* Sidebar */}
       <aside className="w-full md:w-80 space-y-4">
-        <div className="border-4 border-black p-4 bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sticky top-24">
-          <h3 className="font-black uppercase text-sm tracking-widest mb-4 border-b-2 border-black pb-2">
-            Course Syllabus
-          </h3>
-          
-          <nav className="space-y-2">
-            {lessons?.map((lesson) => {
-              const isCompleted = completedIds.has(lesson.id)
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden sticky top-24 shadow-sm">
+          <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="font-semibold text-slate-900 text-sm tracking-tight">
+              Course Syllabus
+            </h3>
+            <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-1">
+              {completedIds.size} / {lessons?.length || 0} Lessons Complete
+            </p>
+          </div>
+
+          <nav className="p-2">
+            {lessons?.map((lesson, idx) => {
+              const isCompleted = completedIds.has(lesson.id);
+              
+              // LOCK LOGIC: 
+              // Unlocked if it's the first lesson OR if the previous lesson is completed
+              const isFirstLesson = idx === 0;
+              const previousLessonCompleted = idx > 0 && completedIds.has(lessons[idx - 1].id);
+              const isUnlocked = isFirstLesson || previousLessonCompleted;
+
+              if (!isUnlocked) {
+                return (
+                  <div
+                    key={lesson.id}
+                    className="flex items-center gap-3 p-3 rounded-lg opacity-50 cursor-not-allowed select-none group"
+                  >
+                    <div className="shrink-0 text-slate-300">
+                      <Lock size={14} />
+                    </div>
+                    <span className="text-sm font-medium text-slate-400 leading-tight">
+                      {lesson.title}
+                    </span>
+                  </div>
+                );
+              }
+
               return (
-                <Link 
+                <Link
                   key={lesson.id}
                   href={`/dashboard/courses/${id}/lessons/${lesson.id}`}
-                  className="flex items-center gap-3 p-3 border-2 border-transparent hover:border-black transition-all group"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-all group relative"
                 >
-                  {isCompleted ? (
-                    <CheckCircle2 size={18} className="text-green-600 shrink-0" />
-                  ) : (
-                    <Circle size={18} className="text-zinc-300 shrink-0 group-hover:text-black" />
-                  )}
-                  <span className={`text-xs font-bold uppercase truncate ${isCompleted ? 'text-zinc-500 line-through decoration-zinc-300' : ''}`}>
+                  <div className="shrink-0">
+                    {isCompleted ? (
+                      <div className="bg-emerald-100 p-1 rounded-full text-emerald-600">
+                        <CheckCircle2 size={14} />
+                      </div>
+                    ) : (
+                      <Circle
+                        size={16}
+                        className="text-slate-300 group-hover:text-[#00adef] transition-colors"
+                      />
+                    )}
+                  </div>
+
+                  <span
+                    className={`text-sm font-medium leading-tight ${
+                      isCompleted 
+                        ? "text-slate-400 line-through decoration-slate-200" 
+                        : "text-slate-700 group-hover:text-[#00adef]"}`}
+                  >
                     {lesson.title}
                   </span>
                 </Link>
-              )
+              );
             })}
           </nav>
 
-          {/* FINAL QUIZ BUTTON - ONLY SHOWS IF ALL COMPLETED */}
           {allLessonsCompleted && (
-            <div className="mt-8 pt-6 border-t-2 border-black border-dashed">
-              <Link 
+            <div className="p-4 bg-slate-50 border-t border-slate-100">
+              <Link
                 href={`/dashboard/courses/${id}/final-quiz`}
-                className="flex items-center gap-3 p-4 bg-yellow-400 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group"
+                className="flex items-center gap-3 p-4 bg-[#00adef] text-white rounded-xl shadow-lg shadow-cyan-500/20 hover:bg-[#0096d1] transition-all group relative"
               >
                 <BookOpen size={20} className="shrink-0" />
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-tighter leading-none">Assessment</span>
-                  <span className="text-sm font-black uppercase leading-tight">Final Exam</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80 leading-none">
+                    Assessment
+                  </span>
+                  <span className="text-sm font-bold leading-tight">
+                    Final Course Quiz
+                  </span>
                 </div>
               </Link>
             </div>
@@ -83,9 +130,7 @@ export default async function CourseLayout({
       </aside>
 
       {/* Content Area */}
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
     </div>
-  )
+  );
 }

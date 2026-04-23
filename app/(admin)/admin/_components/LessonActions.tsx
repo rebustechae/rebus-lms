@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { Edit3, Eye, Trash2 } from "lucide-react";
+import { Edit3, Eye, Trash2, Loader2 } from "lucide-react";
 
 export default function LessonActions({
   lessonId,
@@ -19,7 +19,7 @@ export default function LessonActions({
   const supabase = createClient();
 
   async function handleDelete() {
-    if (!confirm(`Are you sure you want to delete "${lessonTitle}"?`)) return;
+    if (!confirm(`Confirm Deletion: Are you sure you want to permanently remove the module "${lessonTitle}"?`)) return;
 
     setIsDeleting(true);
     const { error } = await supabase
@@ -28,40 +28,52 @@ export default function LessonActions({
       .eq("id", lessonId);
 
     if (error) {
-      alert(error.message);
+      alert(`System Error: ${error.message}`);
       setIsDeleting(false);
     } else {
       router.refresh();
     }
   }
 
+  // Consistent button style for a clean professional look
+  const btnClass = "flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-all border";
+
   return (
-    <div className="flex gap-2">
+    <div className="flex items-center gap-2">
+      {/* PREVIEW BUTTON */}
       <button
         onClick={() =>
           router.push(`/dashboard/courses/${courseId}/lessons/${lessonId}`)
         }
-        className="flex items-center gap-1 text-[10px] font-black uppercase border border-black px-3 py-1 hover:bg-black hover:text-white transition-all"
+        className={`${btnClass} bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm`}
       >
-        <Eye size={12} /> Preview
+        <Eye size={14} className="text-slate-400" /> 
+        Preview
       </button>
 
-      {/* NEW EDIT BUTTON */}
+      {/* EDIT BUTTON */}
       <button
         onClick={() =>
           router.push(`/admin/courses/${courseId}/lessons/${lessonId}/edit`)
         }
-        className="flex items-center gap-1 text-[10px] font-black uppercase border border-black px-3 py-1 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all"
+        className={`${btnClass} bg-white border-slate-200 text-slate-600 hover:bg-[#00ADEF]/5 hover:text-[#00ADEF] hover:border-[#00ADEF]/30 shadow-sm`}
       >
-        <Edit3 size={12} /> Edit
+        <Edit3 size={14} className="text-slate-400 group-hover:text-[#00ADEF]" /> 
+        Edit
       </button>
 
+      {/* DELETE BUTTON */}
       <button
         onClick={handleDelete}
         disabled={isDeleting}
-        className="flex items-center gap-1 text-[10px] font-black uppercase border border-red-600 text-red-600 px-3 py-1 hover:bg-red-600 hover:text-white transition-all disabled:opacity-50"
+        className={`${btnClass} bg-white border-slate-200 text-slate-400 hover:bg-red-50 hover:text-red-600 hover:border-red-200 shadow-sm disabled:opacity-50`}
+        title="Delete Lesson"
       >
-        <Trash2 size={12} /> {isDeleting ? "..." : "Delete"}
+        {isDeleting ? (
+          <Loader2 size={14} className="animate-spin text-slate-400" />
+        ) : (
+          <Trash2 size={14} />
+        )}
       </button>
     </div>
   );
