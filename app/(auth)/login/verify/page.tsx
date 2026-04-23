@@ -12,6 +12,8 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default function VerifyPage() {
     const searchParams = useSearchParams()
     const email = searchParams.get('email') || ''
