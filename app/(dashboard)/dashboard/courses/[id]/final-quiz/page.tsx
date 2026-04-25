@@ -90,16 +90,16 @@ export default function FinalCourseQuiz({
     const isPass = score >= 90;
 
     return (
-      <div className="relative flex items-center justify-center w-48 h-48 mx-auto">
+      <div className="relative flex items-center justify-center w-40 h-40 md:w-48 md:h-48 mx-auto">
         <svg className="w-full h-full transform -rotate-90">
           <circle
-            cx="96" cy="96" r={radius}
+            cx="50%" cy="50%" r={radius}
             stroke="currentColor" strokeWidth="10"
             fill="transparent"
             className="text-slate-100"
           />
           <circle
-            cx="96" cy="96" r={radius}
+            cx="50%" cy="50%" r={radius}
             stroke="currentColor" strokeWidth="10"
             fill="transparent"
             strokeDasharray={circumference}
@@ -109,10 +109,10 @@ export default function FinalCourseQuiz({
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className={`text-4xl font-bold tracking-tighter ${isPass ? "text-[#662D91]" : "text-rose-600"}`}>
+          <span className={`text-3xl md:text-4xl font-black tracking-tighter ${isPass ? "text-[#662D91]" : "text-rose-600"}`}>
             {score}%
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+          <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
             Achievement
           </span>
         </div>
@@ -122,36 +122,39 @@ export default function FinalCourseQuiz({
 
   if (questions.length === 0)
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400 font-medium">
-        Establishing connection to server...
+      <div className="min-h-screen flex items-center justify-center text-slate-400 font-bold px-6 text-center">
+        Establishing secure connection to assessment server...
       </div>
     );
 
   return (
-    <div className="max-w-3xl mx-auto py-16 px-6 space-y-12">
-      <header className="flex justify-between items-end border-b border-slate-100 pb-8">
+    <div className="max-w-3xl mx-auto py-8 md:py-16 px-4 sm:px-6 space-y-10 md:space-y-12">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-100 pb-6 md:pb-8 gap-4">
         <div className="space-y-1">
-          <Link href={`/dashboard/courses/${params.id}`} className="flex items-center gap-2 text-xs font-bold text-[#00ADEF] mb-4 hover:underline">
-            <ArrowLeft size={14} /> EXIT TO SYLLABUS
+          <Link href={`/dashboard/courses/${params.id}`} className="inline-flex items-center gap-2 text-[10px] font-black text-[#00ADEF] mb-2 hover:opacity-70 transition-all uppercase tracking-widest">
+            <ArrowLeft size={14} strokeWidth={3} /> Exit to Syllabus
           </Link>
-          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
             Final Assessment
           </h1>
+        </div>
+        <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 w-fit">
+           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Passing Grade: 90%</span>
         </div>
       </header>
 
       {submitted ? (
-        <div className="bg-white border border-slate-200 rounded-3xl p-12 shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
+        <div className="bg-white border border-slate-200 rounded-[2rem] p-6 md:p-12 shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
           <ScoreRing score={finalScore} />
 
           <div className="space-y-3">
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
-              {finalScore >= 90 ? "Certification Validated" : "Incomplete Validation"}
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+              {finalScore >= 90 ? "Certification Validated" : "Validation Incomplete"}
             </h2>
-            <p className="text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+            <p className="text-sm md:text-base text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
               {finalScore >= 90
-                ? "You have successfully demonstrated mastery of the course."
-                : "The passing score for this assessment is 90%. Please review the course materials and attempt the assessment again."}
+                ? "You have successfully demonstrated mastery. Your credentials have been updated."
+                : "The passing score for this assessment is 90%. Please review the modules and try again."}
             </p>
           </div>
 
@@ -159,41 +162,42 @@ export default function FinalCourseQuiz({
             {finalScore < 90 ? (
               <button
                 onClick={() => { setSubmitted(false); setAnswers({}); }}
-                className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all active:scale-95"
               >
                 <RefreshCcw size={18} /> Re-attempt Assessment
               </button>
             ) : (
               <button
                 onClick={() => router.push("/dashboard")}
-                className="flex items-center justify-center gap-2 w-full bg-[#662D91] text-white py-4 rounded-2xl font-bold hover:bg-[#522475] transition-all shadow-lg shadow-purple-200"
+                className="flex items-center justify-center gap-2 w-full bg-[#662D91] text-white py-4 rounded-2xl font-bold hover:bg-[#522475] transition-all active:scale-95 shadow-lg shadow-purple-200"
               >
-                <Award size={18} /> View My Dashboard
+                <Award size={18} /> Return to Dashboard
               </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="space-y-16">
+        <div className="space-y-12 md:space-y-16">
           {questions.map((q, idx) => (
-            <div key={q.id} className="group space-y-6">
-              <div className="flex items-start gap-4">
-                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400 group-focus-within:bg-[#00ADEF] group-focus-within:text-white transition-colors">
-                  {idx + 1}
+            <div key={q.id} className="group space-y-5 md:space-y-6">
+              <div className="flex items-start gap-3 md:gap-4">
+                <span className="flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] md:text-xs font-black text-slate-400 group-focus-within:bg-[#00ADEF] group-focus-within:text-white transition-colors">
+                  {(idx + 1).toString().padStart(2, '0')}
                 </span>
-                <p className="text-xl font-semibold text-slate-800 pt-1 leading-snug">
+                <p className="text-lg md:text-xl font-bold text-slate-800 pt-0.5 leading-snug">
                   {q.question}
                 </p>
               </div>
               
-              <div className="grid gap-3 pl-12">
+              {/* pl-0 on mobile, pl-12 on desktop to save space */}
+              <div className="grid gap-2 md:gap-3 pl-0 md:pl-12">
                 {q.options.map((opt: string) => (
                   <button
                     key={opt}
                     onClick={() => setAnswers({ ...answers, [idx]: opt })}
-                    className={`p-4 text-left text-sm font-semibold rounded-xl border-2 transition-all ${
+                    className={`p-4 text-left text-sm font-bold rounded-xl md:rounded-2xl border-2 transition-all active:scale-[0.98] ${
                       answers[idx] === opt
-                        ? "bg-slate-50 border-[#00ADEF] text-[#00ADEF] ring-4 ring-cyan-50"
+                        ? "bg-cyan-50/30 border-[#00ADEF] text-[#00ADEF] ring-4 ring-cyan-50/50"
                         : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
                     }`}
                   >
@@ -208,14 +212,14 @@ export default function FinalCourseQuiz({
             <button
               disabled={Object.keys(answers).length < questions.length}
               onClick={calculateResults}
-              className={`w-full py-5 rounded-2xl font-bold text-lg tracking-wide transition-all flex items-center justify-center gap-2
+              className={`w-full py-4 md:py-5 rounded-2xl font-black text-base md:text-lg tracking-wide transition-all flex items-center justify-center gap-2 active:scale-95
                 ${Object.keys(answers).length === questions.length
                   ? "bg-[#00ADEF] text-white hover:bg-[#0096d1] shadow-xl shadow-cyan-500/20"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+                  : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}
             >
-              Submit Final Assessment <ChevronRight size={20} />
+              Submit Assessment <ChevronRight size={20} />
             </button>
-            <p className="text-center text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-6">
+            <p className="text-center text-[9px] md:text-[11px] text-slate-300 font-bold uppercase tracking-[0.3em] mt-8">
               &copy; 2026 Rebus Holdings
             </p>
           </div>

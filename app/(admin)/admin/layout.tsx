@@ -107,7 +107,7 @@ export default function AdminLayout({
       <main className="flex-1 overflow-y-auto">
         {/* TOP BAR / BREADCRUMB SPACE */}
         <header className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-md sticky top-0 z-20 flex items-center px-12">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">System Root / {pathname.replace('/admin', 'Admin').replace('/', ' / ')}</p>
+            <p className="text-[10px] font-semibold uppercase text-rebus-purple">System Root / {pathname.replace('/admin', 'Admin').replace('/', ' / ')}</p>
         </header>
 
         <div className="p-12">

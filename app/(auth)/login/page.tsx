@@ -14,7 +14,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Internal LMS</CardTitle>
+          <CardTitle>Rebus Holdings Internal LMS</CardTitle>
           <CardDescription>Enter your company email to receive a login code.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -32,7 +32,7 @@ export default function LoginPage() {
               <p className="text-sm font-medium text-destructive">{state.error}</p>
             )}
 
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button type="submit" className="w-full bg-rebus-blue hover:bg-rebus-blue/80 text-white py-6" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send Code
             </Button>

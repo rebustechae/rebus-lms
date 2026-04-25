@@ -18,13 +18,11 @@ export default function LessonContentPage({
   const params = use(paramsPromise);
   const router = useRouter();
 
-  // Lesson States
   const [lesson, setLesson] = useState<any>(null);
   const [nextLessonId, setNextLessonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
 
-  // Video/Completion States
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [isFirstViewing, setIsFirstViewing] = useState(false);
   const [quiz, setQuiz] = useState<any[]>([]);
@@ -33,31 +31,23 @@ export default function LessonContentPage({
 
   const supabase = createClient();
 
-  // EFFECT 1: FETCH DATA
   useEffect(() => {
     async function getLessonData() {
       setVideoCompleted(false);
       setQuizPassed(false);
       setCompletionSaved(false);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Fetch Lesson Data
       const { data: lessonData, error: lError } = await supabase
         .from("lessons")
         .select("id, title, content, order_index, video_url")
         .eq("id", params.lessonId)
         .maybeSingle();
 
-      if (!lessonData || lError) {
-        console.error("Lesson fetch error:", lError);
-        return;
-      }
+      if (!lessonData || lError) return;
 
-      // 2. Fetch Quiz
       const { data: quizData } = await supabase
         .from("quizzes")
         .select("id, question, options, correct_answer")
@@ -65,29 +55,21 @@ export default function LessonContentPage({
 
       setQuiz(quizData || []);
 
-      // 3. Fetch Progress to determine if first viewing
-      const { data: progressData, error: pError } = await supabase
+      const { data: progressData } = await supabase
         .from("user_progress")
         .select("lesson_id")
         .eq("lesson_id", params.lessonId)
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (pError) {
-        console.error("Progress fetch error:", pError.message);
-      }
-
-      // If no progress record exists, this is first viewing
       const isFirstView = !progressData;
       setIsFirstViewing(isFirstView);
 
-      // If already completed, mark video as done
       if (progressData) {
         setVideoCompleted(true);
         setQuizPassed(true);
       }
 
-      // 4. Fetch Next Lesson ID for the button
       const { data: allLessons } = await supabase
         .from("lessons")
         .select("id, order_index")
@@ -95,9 +77,7 @@ export default function LessonContentPage({
         .order("order_index", { ascending: true });
 
       if (allLessons) {
-        const currentIndex = allLessons.findIndex(
-          (l) => l.id === params.lessonId,
-        );
+        const currentIndex = allLessons.findIndex((l) => l.id === params.lessonId);
         if (currentIndex !== -1 && currentIndex < allLessons.length - 1) {
           setNextLessonId(allLessons[currentIndex + 1].id);
         }
@@ -109,13 +89,8 @@ export default function LessonContentPage({
     getLessonData();
   }, [params.lessonId, params.id, supabase]);
 
-  // EFFECT 2: PERSIST COMPLETION ONCE VIDEO COMPLETES (first viewing only)
   useEffect(() => {
-    if (loading) return;
-    if (completionSaved) return;
-    if (!videoCompleted) return;
-    if (quiz.length > 0 && !quizPassed) return;
-    if (!isFirstViewing) return; // Only auto-save on first viewing
+    if (loading || completionSaved || !videoCompleted || (quiz.length > 0 && !quizPassed) || !isFirstViewing) return;
 
     (async () => {
       try {
@@ -127,19 +102,8 @@ export default function LessonContentPage({
         console.error(error);
       }
     })();
-  }, [
-    videoCompleted,
-    completionSaved,
-    loading,
-    params.id,
-    params.lessonId,
-    quiz.length,
-    quizPassed,
-    router,
-    isFirstViewing,
-  ]);
+  }, [videoCompleted, completionSaved, loading, params.id, params.lessonId, quiz.length, quizPassed, router, isFirstViewing]);
 
-  // Quiz Pass Handler
   const handleQuizPass = async () => {
     setQuizPassed(true);
     try {
@@ -152,66 +116,73 @@ export default function LessonContentPage({
     }
   };
 
-  if (loading)
-    return (
-      <div className="p-20 text-center animate-pulse">Loading lesson...</div>
-    );
-  if (isLocked)
-    return <div className="p-20 text-center">Locked Section...</div>;
+  if (loading) return <div className="p-20 text-center animate-pulse font-bold text-slate-400">Loading lesson...</div>;
+  if (isLocked) return <div className="p-20 text-center font-bold">Locked Section...</div>;
 
   return (
     <div className="min-h-screen bg-white">
-      <main className="max-w-3xl mx-auto pt-32 pb-24 px-6">
+      {/* 1. Logo - Adjusted for mobile visibility (hidden on very small screens or moved) */}
+      <div className="fixed top-4 right-4 md:top-12 md:right-12 z-50 pointer-events-none">
+        <img
+          src="/logo.png"
+          alt="Rebus LMS"
+          className="h-8 md:h-16 w-auto object-contain opacity-50 md:opacity-100"
+        />
+      </div>
+
+      <main className="max-w-4xl mx-auto pt-16 md:pt-32 pb-24 px-4 sm:px-6 md:px-8">
+        {/* 2. Back Button */}
         <button
           onClick={() => router.push(`/dashboard/courses/${params.id}`)}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#00ADEF] transition-colors mb-8 group"
+          className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-400 hover:text-[#00ADEF] transition-colors mb-6 md:mb-10 group uppercase tracking-widest"
         >
-          <ChevronLeft
-            size={16}
-            className="group-hover:-translate-x-1 transition-transform"
-          />
-          Back to Course
+          <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          Back to Directory
         </button>
 
-        <header className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <span className="bg-slate-100 text-slate-500 text-[11px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">
+        <header className="mb-10 md:mb-16">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <span className="bg-slate-100 text-slate-500 text-[9px] md:text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest">
               Module {lesson.order_index}
             </span>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight leading-tight mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.1] mb-8 md:mb-12">
             {lesson.title}
           </h1>
 
-          {/* Video Player */}
+          {/* Video Player Container - Ensure responsive aspect ratio via CSS if component doesn't */}
           {lesson.video_url && (
-            <VideoPlayer
-              videoUrl={lesson.video_url}
-              isFirstViewing={isFirstViewing}
-              onVideoProgress={(progress) => {
-                // Optional: track video progress for analytics
-              }}
-              onVideoComplete={() => setVideoCompleted(true)}
-            />
+            <div className="rounded-2xl overflow-hidden shadow-2xl shadow-blue-900/10">
+              <VideoPlayer
+                videoUrl={lesson.video_url}
+                isFirstViewing={isFirstViewing}
+                onVideoProgress={(progress) => {}}
+                onVideoComplete={() => setVideoCompleted(true)}
+              />
+            </div>
           )}
         </header>
 
-        {/* Content Section */}
-        <article className="text-lg select-none leading-relaxed text-zinc-800 [&>ul]:list-disc [&>ul]:ml-8 [&>ul]:my-4 [&>ol]:list-decimal [&>ol]:ml-8 [&>ol]:my-4 [&>li]:pl-2 [&>p]:mb-4 [&>p>a]:text-black [&>p>a]:underline">
+        {/* 3. Content Section - Typography scaling for mobile */}
+        <article className="prose prose-slate max-w-none text-base md:text-lg select-none leading-relaxed text-slate-700 
+          [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:my-4 
+          [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:my-4 
+          [&>li]:pl-2 [&>p]:mb-6 
+          [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-slate-900 [&>h2]:mt-10 [&>h2]:mb-4
+          [&>p>a]:text-[#00ADEF] [&>p>a]:font-bold [&>p>a]:underline">
           <ReactMarkdown key={params.lessonId}>{lesson.content}</ReactMarkdown>
         </article>
 
         {/* QUIZ SECTION */}
         {quiz.length > 0 && (
-          <div className="mt-20 pt-12 border-t border-slate-100">
+          <div className="mt-16 md:mt-24 pt-12 border-t border-slate-100">
             <LessonQuiz questions={quiz} onPass={handleQuizPass} />
           </div>
         )}
 
-        <footer className="mt-20 pt-10 border-t border-slate-100">
-          <div className="flex flex-col items-center gap-6">
-            {/* GATEKEEPER LOGIC ON NEXT BUTTON */}
+        <footer className="mt-16 md:mt-24 pt-10 border-t border-slate-100">
+          <div className="flex flex-col items-center gap-8">
             <button
               disabled={!videoCompleted || (quiz.length > 0 && !quizPassed)}
               onClick={() =>
@@ -221,25 +192,25 @@ export default function LessonContentPage({
                     : `/dashboard/courses/${params.id}/final-quiz`,
                 )
               }
-              className={`w-full py-5 rounded-xl font-bold transition-all flex items-center justify-center gap-3 text-white
+              className={`w-full py-4 md:py-6 rounded-2xl font-black transition-all flex items-center justify-center gap-3 text-white uppercase tracking-widest text-xs md:text-sm
                 ${
                   videoCompleted && (quiz.length === 0 || quizPassed)
                     ? nextLessonId
-                      ? "bg-[#00ADEF] hover:bg-[#0098D4] active:bg-[#0085BD] shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 active:scale-95"
-                      : "bg-[#662D91] hover:bg-[#581F7D] active:bg-[#4A186E] shadow-lg shadow-purple-200 hover:shadow-xl hover:shadow-purple-300 active:scale-95"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      ? "bg-[#00ADEF] hover:bg-[#0098D4] active:scale-95 shadow-xl shadow-blue-200"
+                      : "bg-[#662D91] hover:bg-[#581F7D] active:scale-95 shadow-xl shadow-purple-200"
+                    : "bg-slate-100 text-slate-300 cursor-not-allowed"
                 }`}
             >
-              {videoCompleted ? <CheckCircle2 size={20} /> : <span>▶</span>}
+              {videoCompleted ? <CheckCircle2 size={18} /> : null}
               {videoCompleted
                 ? nextLessonId
-                  ? "Continue to Next Module"
-                  : "Take Final Assessment"
-                : "Complete the video to continue"}
+                  ? "Next Module"
+                  : "Final Assessment"
+                : "Finish Video to Unlock"}
               <ChevronRight size={18} />
             </button>
 
-            <p className="text-[11px] text-slate-400 font-medium uppercase tracking-[0.2em]">
+            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em]">
               &copy; 2026 Rebus Holdings
             </p>
           </div>

@@ -51,7 +51,7 @@ function VerifyForm() {
                 <CardTitle className='text-3xl font-bold tracking-tight text-slate-900'>Verify Account</CardTitle>
                 <CardDescription className="text-slate-500 mt-2">
                     Enter the 6-digit OTP sent to <br />
-                    <span className='font-bold text-[#00ADEF]'>{email}</span>
+                    <span className='font-semibold text-rebus-purple'>{email}</span>
                 </CardDescription>
             </CardHeader>
             <CardContent className='flex flex-col items-center gap-8 pb-10'>
@@ -61,13 +61,13 @@ function VerifyForm() {
                     onChange={((val) => setCode(val))}
                     disabled={isLoading}
                 >
-                    <InputOTPGroup className="gap-2">
-                        <InputOTPSlot index={0} className="rounded-xl border-2 size-12 text-lg font-bold" />
-                        <InputOTPSlot index={1} className="rounded-xl border-2 size-12 text-lg font-bold" />
-                        <InputOTPSlot index={2} className="rounded-xl border-2 size-12 text-lg font-bold" />
-                        <InputOTPSlot index={3} className="rounded-xl border-2 size-12 text-lg font-bold" />
-                        <InputOTPSlot index={4} className="rounded-xl border-2 size-12 text-lg font-bold" />
-                        <InputOTPSlot index={5} className="rounded-xl border-2 size-12 text-lg font-bold" />
+                    <InputOTPGroup className="">
+                        <InputOTPSlot index={0} className="border-1 size-12 text-lg font-bold" />
+                        <InputOTPSlot index={1} className="border-1 size-12 text-lg font-bold" />
+                        <InputOTPSlot index={2} className="border-1 size-12 text-lg font-bold" />
+                        <InputOTPSlot index={3} className="border-1 size-12 text-lg font-bold" />
+                        <InputOTPSlot index={4} className="border-1 size-12 text-lg font-bold" />
+                        <InputOTPSlot index={5} className="border-1 size-12 text-lg font-bold" />
                     </InputOTPGroup>
                 </InputOTP>
 
@@ -82,7 +82,7 @@ function VerifyForm() {
                 <div className="w-full space-y-4">
                     <Button
                         onClick={handleVerify}
-                        className='w-full bg-slate-900 hover:bg-slate-800 text-white py-7 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs transition-all shadow-xl shadow-slate-200'
+                        className='w-full bg-rebus-blue hover:bg-rebus-blue/80 text-white py-7 rounded-xl font-semibold uppercase text-xs transition-all shadow-xl shadow-slate-200'
                         disabled={code.length !== 6 || isLoading}
                     >
                         {isLoading ? (
@@ -97,7 +97,7 @@ function VerifyForm() {
 
                     <button
                         onClick={() => window.location.href = '/login'}
-                        className='w-full text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-colors'
+                        className='w-full text-[10px] font-medium text-slate-400 hover:text-slate-900 hover:text-underline transition-colors'
                     >
                         Back to login
                     </button>

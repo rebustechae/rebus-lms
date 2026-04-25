@@ -183,16 +183,15 @@ export default async function AdminUsersPage({
         </div>
         <div className="flex gap-2">
           <a
-            href={`/admin/users?${new URLSearchParams({
+            href={hasPrevPage ? `/admin/users?${new URLSearchParams({
               query,
               page: String(Math.max(1, page - 1)),
-            }).toString()}`}
+            }).toString()}` : "#"}
             className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
               !hasPrevPage
-                ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed pointer-events-none"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
-            onClick={(e) => !hasPrevPage && e.preventDefault()}
           >
             ← Previous
           </a>
@@ -200,16 +199,15 @@ export default async function AdminUsersPage({
             Page {page} of {totalPages}
           </div>
           <a
-            href={`/admin/users?${new URLSearchParams({
+            href={hasNextPage ? `/admin/users?${new URLSearchParams({
               query,
               page: String(Math.min(totalPages, page + 1)),
-            }).toString()}`}
+            }).toString()}` : "#"}
             className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
               !hasNextPage
-                ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed pointer-events-none"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
-            onClick={(e) => !hasNextPage && e.preventDefault()}
           >
             Next →
           </a>

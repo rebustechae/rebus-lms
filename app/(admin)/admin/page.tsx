@@ -49,8 +49,8 @@ export default async function AdminPage() {
       {/* ANALYTICS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: "Active Courses", val: courses?.length || 0, icon: <Layers className="text-blue-600" />, bg: "bg-blue-50" },
-          { label: "Course Completions", val: totalCertifications || 0, icon: <ShieldCheck className="text-emerald-600" />, bg: "bg-emerald-50" },
+          { label: "Active Courses", val: courses?.length || 0, icon: <Layers className="text-rebus-blue" />, bg: "bg-blue-50" },
+          { label: "Course Completions", val: totalCertifications || 0, icon: <ShieldCheck className="text-rebus-purple" />, bg: "bg-purple-50" },
           { label: "Active Personnel", val: uniqueStudentCount, icon: <Users className="text-slate-600" />, bg: "bg-slate-100" }
         ].map((kpi, i) => (
           <div key={i} className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm hover:border-slate-300 transition-colors">
@@ -69,11 +69,7 @@ export default async function AdminPage() {
       {/* DATA TABLE SECTION */}
       <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-          <h3 className="font-bold text-slate-800 text-sm">Course Registry</h3>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">System Operational</span>
-          </div>
+          <h3 className="font-semibold text-slate-800 text-sm">Course Registry</h3>
         </div>
 
         <div className="overflow-x-auto">
@@ -82,7 +78,7 @@ export default async function AdminPage() {
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-white text-slate-400 text-[11px] font-bold uppercase tracking-wider border-b border-slate-100">
+                <tr className="bg-white text-slate-500 text-[11px] font-medium uppercase border-b border-slate-100">
                   <th className="px-6 py-4">Course Info</th>
                   <th className="px-6 py-4">Modules</th>
                   <th className="px-6 py-4">Status</th>
