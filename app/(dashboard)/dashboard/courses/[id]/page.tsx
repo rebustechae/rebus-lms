@@ -1,78 +1,81 @@
-import { createClient } from "@/utils/supabase/server"
-import { notFound } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, PlayCircle, Lock, BookOpen } from "lucide-react"
+import { createClient } from "@/utils/supabase/server";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, PlayCircle, Lock, BookOpen } from "lucide-react";
 
-export default async function CourseDirectory({ params }: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient()
-  const { id } = await params
+export default async function CourseDirectory({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const supabase = await createClient();
+  const { id } = await params;
 
-  // 1. Fetch Course and Lessons
-  const { data: course } = await supabase.from('courses').select('*').eq('id', id).single()
-  const { data: lessons } = await supabase.from('lessons').select('*').eq('course_id', id).order('order_index', { ascending: true })
+  const { data: course } = await supabase.from("courses").select("*").eq("id", id).single();
+  const { data: lessons } = await supabase.from("lessons").select("*").eq("course_id", id).order("order_index", { ascending: true });
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: progress } = await supabase.from("user_progress").select("lesson_id").eq("user_id", user?.id);
 
-  // 2. Fetch User Progress for locking logic
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: progress } = await supabase
-    .from("user_progress")
-    .select("lesson_id")
-    .eq("user_id", user?.id)
-
-  const completedIds = new Set(progress?.map((p) => p.lesson_id))
-
-  if (!course) notFound()
+  const completedIds = new Set(progress?.map((p) => p.lesson_id));
+  if (!course) notFound();
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4 space-y-12 select-none">
-      {/* BREATHING ROOM TOP NAV */}
-      <Link href="/dashboard" className="inline-flex items-center gap-2 text-xs font-bold text-[#00ADEF] hover:text-[#0096d1] transition-colors tracking-widest">
-        <ArrowLeft size={14} /> RETURN TO DASHBOARD
-      </Link>
+    /* Removed max-w-4xl and mx-auto to let the layout handle width */
+    <div className="w-full py-8 px-6 md:px-10 space-y-10 select-none overflow-x-hidden">
+      
+      {/* 1. Navigation Header */}
+      <div className="space-y-6">
+        <Link 
+          href="/dashboard" 
+          className="inline-flex items-center gap-2 text-[10px] font-black text-[#00ADEF] hover:opacity-70 transition-all tracking-[0.2em] uppercase"
+        >
+          <ArrowLeft size={14} strokeWidth={3} /> Return to Dashboard
+        </Link>
 
-      <header className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
-            Enterprise Track
-          </span>
-        </div>
-        <h1 className="text-5xl font-bold text-slate-900 tracking-tight leading-tight">
-          {course.title}
-        </h1>
-        <p className="text-lg text-slate-600 max-w-2xl leading-relaxed">
-          {course.description}
-        </p>
-      </header>
+        <header className="max-w-4xl space-y-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight leading-[1.1]">
+            {course.title}
+          </h1>
+          <p className="text-lg text-slate-500 leading-relaxed font-medium">
+            {course.description}
+          </p>
+        </header>
+      </div>
 
+      {/* 2. Lessons Section */}
       <div className="space-y-6">
         <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <h3 className="font-bold text-slate-900 text-sm uppercase tracking-widest">Available Modules</h3>
-          <span className="text-xs font-bold text-slate-400 uppercase">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-900">
+            Available Modules
+          </h3>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             {completedIds.size} / {lessons?.length || 0} Complete
           </span>
         </div>
 
-        <div className="grid gap-3">
+        {/* The Lesson Stack */}
+        <div className="grid gap-4 max-w-5xl">
           {lessons?.map((lesson, idx) => {
             const isCompleted = completedIds.has(lesson.id);
-            const isFirst = idx === 0;
-            const isUnlocked = isFirst || completedIds.has(lessons[idx - 1].id);
+            const isUnlocked = idx === 0 || completedIds.has(lessons[idx - 1].id);
+            
+            // Base Card Container
+            const cardBase = "group flex items-center justify-between p-5 md:p-7 bg-white border rounded-[24px] transition-all duration-300";
 
             if (!isUnlocked) {
               return (
-                <div 
-                  key={lesson.id} 
-                  className="bg-slate-50/50 border border-slate-100 p-5 rounded-2xl flex justify-between items-center opacity-60 cursor-not-allowed"
-                >
-                  <div className="flex items-center gap-6">
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300 font-bold">
+                <div key={lesson.id} className={`${cardBase} border-slate-100 bg-slate-50/40 opacity-60 cursor-not-allowed`}>
+                  <div className="flex items-center gap-6 min-w-0">
+                    <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300 font-bold text-xl">
                       {(idx + 1).toString().padStart(2, '0')}
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Section {idx + 1}</span>
-                      <span className="font-bold text-slate-400 text-lg">{lesson.title}</span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-1">Section {idx + 1}</p>
+                      <h4 className="text-xl font-bold text-slate-300 truncate">{lesson.title}</h4>
                     </div>
                   </div>
-                  <Lock size={20} className="text-slate-300 mr-2" />
+                  <Lock size={20} className="text-slate-200 flex-shrink-0 mr-4" />
                 </div>
               );
             }
@@ -81,44 +84,46 @@ export default async function CourseDirectory({ params }: { params: Promise<{ id
               <Link 
                 key={lesson.id} 
                 href={`/dashboard/courses/${id}/lessons/${lesson.id}`}
-                className="group bg-white border border-slate-200 p-5 rounded-2xl flex justify-between items-center hover:border-[#00ADEF] hover:shadow-md hover:shadow-cyan-500/5 transition-all"
+                className={`${cardBase} border-slate-200 hover:border-[#00ADEF] hover:shadow-xl hover:shadow-blue-500/5`}
               >
-                <div className="flex items-center gap-6">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold transition-colors ${
-                    isCompleted ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400 group-hover:bg-cyan-50 group-hover:text-[#00ADEF]"
+                <div className="flex items-center gap-6 min-w-0">
+                  {/* Lesson Number Box */}
+                  <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl transition-all shadow-sm ${
+                    isCompleted 
+                      ? 'bg-emerald-50 text-emerald-500' 
+                      : 'bg-slate-50 text-slate-400 group-hover:bg-cyan-50 group-hover:text-[#00ADEF]'
                   }`}>
                     {(idx + 1).toString().padStart(2, '0')}
                   </div>
-                  
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Section {idx + 1}</span>
-                      {isCompleted && <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase">Completed</span>}
+
+                  {/* Title and Badge */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Section {idx + 1}</p>
+                      {isCompleted && (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[9px] font-black uppercase rounded tracking-tighter">
+                          Completed
+                        </span>
+                      )}
                     </div>
-                    <span className="font-bold text-slate-900 text-lg group-hover:text-[#00ADEF] transition-colors">
+                    <h4 className="text-lg md:text-xl font-bold text-slate-900 group-hover:text-[#00ADEF] transition-colors truncate">
                       {lesson.title}
-                    </span>
+                    </h4>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-slate-300 group-hover:text-[#00ADEF] transition-all transform group-hover:translate-x-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest hidden md:block">
-                    {isCompleted ? "Review" : "Initialize"}
+                {/* Right Side Action */}
+                <div className="flex items-center gap-4 text-slate-200 group-hover:text-[#00ADEF] transition-all flex-shrink-0">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] hidden sm:block opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                    {isCompleted ? "Review" : "Start"}
                   </span>
-                  <PlayCircle size={24} strokeWidth={1.5} />
+                  <PlayCircle size={32} strokeWidth={1.2} className="transition-transform group-hover:scale-110" />
                 </div>
               </Link>
             );
           })}
-
-          {lessons?.length === 0 && (
-            <div className="p-16 text-center border-2 border-dashed border-slate-100 rounded-3xl">
-              <BookOpen className="mx-auto text-slate-200 mb-4" size={48} />
-              <p className="text-slate-400 font-medium">Modules are currently being finalized.</p>
-            </div>
-          )}
         </div>
       </div>
     </div>
-  )
+  );
 }

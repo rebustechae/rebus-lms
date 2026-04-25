@@ -1,8 +1,17 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import { CheckCircle2, Circle, BookOpen, Lock } from "lucide-react";
+import { getLessonsForCourse, getUserProgressForCourse } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
+/**
+ * ISR (Incremental Static Regeneration) - Revalidate every 30 seconds
+ * This caches the layout and only rebuilds when:
+ * 1. 30 seconds have passed, OR
+ * 2. revalidatePath() is called after lesson completion
+ * 
+ * Much more scalable than force-dynamic which queries DB on every request
+ */
+export const revalidate = 30;
 
 export default async function CourseLayout({
   children,
@@ -11,125 +20,73 @@ export default async function CourseLayout({
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  const supabase = await createClient();
   const { id } = await params;
 
-  const { data: lessons } = await supabase
-    .from("lessons")
-    .select("id, title, order_index")
-    .eq("course_id", id)
-    .order("order_index", { ascending: true });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Use optimized queries (they only select needed columns)
+  const lessons = await getLessonsForCourse(id);
   
-  const { data: progress } = await supabase
-    .from("user_progress")
-    .select("lesson_id")
-    .eq("user_id", user?.id);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // Get user progress for this specific course (not all progress)
+  let completedIds = new Set<string>();
+  
+  if (user) {
+    const progress = await getUserProgressForCourse(user.id, id);
+    completedIds = new Set(progress.map((p) => p.lesson_id));
+  }
 
-  const completedIds = new Set(progress?.map((p) => p.lesson_id));
-
-  const allLessonsCompleted =
-    lessons && lessons.length > 0
-      ? lessons.every((l) => completedIds.has(l.id))
-      : false;
+  const allLessonsCompleted = 
+    lessons?.length ? lessons.every((l) => completedIds.has(l.id)) : false;
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen gap-8">
-      {/* Sidebar */}
-      <aside className="w-full md:w-80 space-y-4">
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden sticky top-24 shadow-sm">
-          <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-semibold text-slate-900 text-sm tracking-tight">
-              Course Syllabus
-            </h3>
-            <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-1">
-              {completedIds.size} / {lessons?.length || 0} Lessons Complete
+    <div className="flex flex-col md:flex-row min-h-screen gap-8 bg-white p-4">
+      <aside className="w-full md:w-80">
+        <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden sticky top-24 shadow-sm">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="font-bold text-slate-900 text-sm tracking-tight uppercase">Course Syllabus</h3>
+            <p className="text-[10px] text-slate-500 font-bold mt-1">
+               {completedIds.size} / {lessons?.length || 0} MODULES CLEARED
             </p>
           </div>
 
-          <nav className="p-2">
+          <nav className="p-3 space-y-1">
             {lessons?.map((lesson, idx) => {
               const isCompleted = completedIds.has(lesson.id);
-              
-              // LOCK LOGIC: 
-              // Unlocked if it's the first lesson OR if the previous lesson is completed
               const isFirstLesson = idx === 0;
-              const previousLessonCompleted = idx > 0 && completedIds.has(lessons[idx - 1].id);
-              const isUnlocked = isFirstLesson || previousLessonCompleted;
-
-              if (!isUnlocked) {
-                return (
-                  <div
-                    key={lesson.id}
-                    className="flex items-center gap-3 p-3 rounded-lg opacity-50 cursor-not-allowed select-none group"
-                  >
-                    <div className="shrink-0 text-slate-300">
-                      <Lock size={14} />
-                    </div>
-                    <span className="text-sm font-medium text-slate-400 leading-tight">
-                      {lesson.title}
-                    </span>
-                  </div>
-                );
-              }
+              const isUnlocked = isFirstLesson || completedIds.has(lessons[idx - 1]?.id);
 
               return (
                 <Link
                   key={lesson.id}
-                  href={`/dashboard/courses/${id}/lessons/${lesson.id}`}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-all group relative"
+                  href={isUnlocked ? `/dashboard/courses/${id}/lessons/${lesson.id}` : "#"}
+                  className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${
+                    !isUnlocked ? "opacity-30 cursor-not-allowed" : "hover:bg-slate-50 group"
+                  }`}
                 >
                   <div className="shrink-0">
                     {isCompleted ? (
-                      <div className="bg-emerald-100 p-1 rounded-full text-emerald-600">
-                        <CheckCircle2 size={14} />
+                      <div className="p-0.5 rounded-full text-emerald-500 bg-emerald-50">
+                        <CheckCircle2 size={12} strokeWidth={3} />
                       </div>
+                    ) : !isUnlocked ? (
+                      <Lock size={12} className="text-slate-400" />
                     ) : (
-                      <Circle
-                        size={16}
-                        className="text-slate-300 group-hover:text-[#00adef] transition-colors"
-                      />
+                      <Circle size={14} className="text-slate-300 group-hover:text-[#00adef]" />
                     )}
                   </div>
-
-                  <span
-                    className={`text-sm font-medium leading-tight ${
-                      isCompleted 
-                        ? "text-slate-400 line-through decoration-slate-200" 
-                        : "text-slate-700 group-hover:text-[#00adef]"}`}
-                  >
+                  <span className={`text-[11px] font-bold uppercase tracking-tight ${
+                    isCompleted ? "text-slate-400" : "text-slate-700"
+                  }`}>
                     {lesson.title}
                   </span>
                 </Link>
               );
             })}
           </nav>
-
-          {allLessonsCompleted && (
-            <div className="p-4 bg-slate-50 border-t border-slate-100">
-              <Link
-                href={`/dashboard/courses/${id}/final-quiz`}
-                className="flex items-center gap-3 p-4 bg-[#00adef] text-white rounded-xl shadow-lg shadow-cyan-500/20 hover:bg-[#0096d1] transition-all group relative"
-              >
-                <BookOpen size={20} className="shrink-0" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold uppercase tracking-wider opacity-80 leading-none">
-                    Assessment
-                  </span>
-                  <span className="text-sm font-bold leading-tight">
-                    Final Course Quiz
-                  </span>
-                </div>
-              </Link>
-            </div>
-          )}
         </div>
       </aside>
 
-      {/* Content Area */}
       <main className="flex-1">{children}</main>
     </div>
   );

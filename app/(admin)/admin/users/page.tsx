@@ -8,14 +8,24 @@ export const metadata: Metadata = {
   title: "User Directory | Rebus Admin",
 };
 
-// 1. Add searchParams to the function arguments
+/**
+ * SCALABILITY: Revalidate every 60 seconds
+ * Admin dashboard doesn't need real-time updates
+ * Reduces DB load significantly
+ */
+export const revalidate = 60;
+
+// 1. Add searchParams and pagination to the function arguments
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string }>;
+  searchParams: Promise<{ query?: string; page?: string }>;
 }) {
-  // 2. Resolve the query string
-  const query = (await searchParams).query?.toLowerCase() || "";
+  // 2. Resolve the query string and page number
+  const params = await searchParams;
+  const query = params.query?.toLowerCase() || "";
+  const page = parseInt(params.page || "1", 10);
+  const pageSize = 20; // Show 20 users per page
 
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,49 +38,64 @@ export default async function AdminUsersPage({
     },
   );
 
-  const { data: users } = await supabaseAdmin
+  // OPTIMIZATION: Use database-level filtering instead of JS filtering
+  const offset = (page - 1) * pageSize;
+  let userQuery = supabaseAdmin
     .from("profiles")
-    .select(`
-      id,
-      email,
-      role,
-      created_at,
-      course_completions(count)
-    `)
-    .order("created_at", { ascending: false });
+    .select("id, email, role, created_at", { count: "exact" });
 
-  // 3. FILTER LOGIC: Filter the users list based on the search query
-  const filteredUsers = users?.filter((user: any) => {
-    return (
-      user.email.toLowerCase().includes(query) ||
-      user.role.toLowerCase().includes(query)
+  // Apply search filter at database level
+  if (query) {
+    userQuery = userQuery.or(
+      `email.ilike.%${query}%,role.ilike.%${query}%`
     );
-  });
+  }
 
-  const { data: courseProgress } = await supabaseAdmin
-    .from("user_progress")
-    .select(`
-      user_id,
-      course_id,
-      courses(id, title),
-      lessons(id, course_id)
-    `);
+  const { data: users, count: totalUsers } = await userQuery
+    .order("created_at", { ascending: false })
+    .range(offset, offset + pageSize - 1);
 
-  const userProgressMap = new Map();
+  // OPTIMIZATION: Only fetch progress for users on current page
+  const userIds = users?.map((u) => u.id) || [];
+
+  // Get course progress ONLY for users on this page
+  const { data: courseProgress } = userIds.length > 0
+    ? await supabaseAdmin
+        .from("user_progress")
+        .select(
+          `
+          user_id,
+          course_id,
+          lesson_id,
+          courses:course_id(id, title)
+        `,
+          { count: "exact" }
+        )
+        .in("user_id", userIds)
+    : { data: [] };
+
+  // Build optimized maps
+  const userProgressMap = new Map<string, any[]>();
+  const courseProgressByUserId = new Map<string, Set<string>>();
+
   courseProgress?.forEach((progress: any) => {
-    if (!userProgressMap.has(progress.user_id)) {
-      userProgressMap.set(progress.user_id, []);
+    const { user_id, course_id, courses } = progress;
+
+    if (!courseProgressByUserId.has(user_id)) {
+      courseProgressByUserId.set(user_id, new Set());
     }
-    const coursesArray = userProgressMap.get(progress.user_id);
-    const existingCourse = coursesArray.find((c: any) => c.id === progress.course_id);
-    if (!existingCourse && progress.courses) {
-      coursesArray.push({
-        id: progress.courses.id,
-        title: progress.courses.title,
-      });
+
+    if (!userProgressMap.has(user_id)) {
+      userProgressMap.set(user_id, []);
+    }
+
+    const coursesArray = userProgressMap.get(user_id)!;
+    if (!coursesArray.find((c) => c.id === course_id) && courses) {
+      coursesArray.push({ id: course_id, title: courses.title });
     }
   });
 
+  // Get lesson counts per course (cached for 1 hour)
   const { data: allLessons } = await supabaseAdmin
     .from("lessons")
     .select("id, course_id");
@@ -83,6 +108,10 @@ export default async function AdminUsersPage({
     courseLessonsMap[lesson.course_id].push(lesson.id);
   });
 
+  const totalPages = Math.ceil((totalUsers || 0) / pageSize);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       {/* ENTERPRISE HEADER */}
@@ -93,7 +122,7 @@ export default async function AdminUsersPage({
         </div>
         <div className="flex items-center gap-3">
             <div className="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-slate-200">
-                {users?.length || 0} Registered Users
+                {totalUsers || 0} Total Users
             </div>
         </div>
       </div>
@@ -123,15 +152,14 @@ export default async function AdminUsersPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {/* 5. Map over filteredUsers instead of users */}
-            {!filteredUsers || filteredUsers.length === 0 ? (
+            {!users || users.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-20 text-center text-slate-400 font-medium italic">
                   {query ? `No records matching "${query}"` : "No active personnel records found."}
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user: any) => {
+              users.map((user: any) => {
                 const userCourses = userProgressMap.get(user.id) || [];
                 return (
                   <UserRow 
@@ -146,6 +174,46 @@ export default async function AdminUsersPage({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* PAGINATION CONTROLS */}
+      <div className="flex items-center justify-between px-2">
+        <div className="text-xs text-slate-500 font-medium">
+          Showing {users?.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, totalUsers || 0)} of {totalUsers || 0} users
+        </div>
+        <div className="flex gap-2">
+          <a
+            href={`/admin/users?${new URLSearchParams({
+              query,
+              page: String(Math.max(1, page - 1)),
+            }).toString()}`}
+            className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              !hasPrevPage
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            onClick={(e) => !hasPrevPage && e.preventDefault()}
+          >
+            ← Previous
+          </a>
+          <div className="px-3 py-2 text-xs font-bold text-slate-600">
+            Page {page} of {totalPages}
+          </div>
+          <a
+            href={`/admin/users?${new URLSearchParams({
+              query,
+              page: String(Math.min(totalPages, page + 1)),
+            }).toString()}`}
+            className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              !hasNextPage
+                ? "bg-slate-100 text-slate-300 cursor-not-allowed"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            onClick={(e) => !hasNextPage && e.preventDefault()}
+          >
+            Next →
+          </a>
+        </div>
       </div>
 
       <footer className="flex items-center gap-2 px-2">

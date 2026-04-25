@@ -16,18 +16,21 @@ export default function CourseProgressTooltip({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Get unique courses this user is taking
+  // Get unique courses this user has progress in
   const userCoursesSet = new Set(
     courseProgressByUser
       ?.filter((p: any) => p.user_id === userId)
-      .map((p: any) => p.course_id) || []
+      .map((p: any) => p.lessons?.course_id)
+      .filter(Boolean) || [],
   );
 
   // Get courses with their lesson counts
   const coursesWithProgress = Array.from(userCoursesSet).map((courseId: any) => {
     const totalLessons = courseLessonsMap[courseId]?.length || 0;
     const completedLessons = courseProgressByUser
-      ?.filter((p: any) => p.user_id === userId && p.course_id === courseId)
+      ?.filter(
+        (p: any) => p.user_id === userId && p.lessons?.course_id === courseId,
+      )
       .length || 0;
 
     return {
@@ -42,7 +45,7 @@ export default function CourseProgressTooltip({
   if (coursesWithProgress.length === 0) {
     return (
       <div className="flex items-center justify-center gap-2">
-        <span className="text-zinc-300">No courses</span>
+        <span className="text-zinc-300">No courses started.</span>
       </div>
     );
   }
@@ -73,7 +76,7 @@ export default function CourseProgressTooltip({
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold">{course.title}</span>
                   <span className="text-zinc-500 font-mono">
-                    {course.completed}/{course.total}
+                    {course.total > 0 ? `${course.completed}/${course.total}` : `${course.completed}/—`}
                   </span>
                 </div>
                 <div className="w-full bg-zinc-200 border border-zinc-300 h-2 rounded overflow-hidden">

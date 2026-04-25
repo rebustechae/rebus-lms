@@ -3,7 +3,8 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { ChevronLeft, Save, Loader2, FileText, Hash, Layout } from 'lucide-react'
+import { ChevronLeft, Save, Loader2, FileText, Hash, Layout, Video, Upload, X } from 'lucide-react'
+import { uploadVideoFile } from '@/utils/supabase/storage'
 import QuizManager from "@/app/(admin)/admin/_components/QuizManager"
 
 export default function EditLessonPage({ params: paramsPromise }: { params: Promise<{ id: string, lessonId: string }> }) {
@@ -11,7 +12,10 @@ export default function EditLessonPage({ params: paramsPromise }: { params: Prom
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [lesson, setLesson] = useState({ title: '', content: '', order_index: 0 })
+  const [uploading, setUploading] = useState(false)
+  const [lesson, setLesson] = useState({ title: '', content: '', order_index: 0, video_url: '' })
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadProgress, setUploadProgress] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
@@ -38,6 +42,7 @@ export default function EditLessonPage({ params: paramsPromise }: { params: Prom
         title: lesson.title,
         content: lesson.content,
         order_index: lesson.order_index,
+        video_url: lesson.video_url,
       })
       .eq('id', params.lessonId)
 
@@ -48,6 +53,33 @@ export default function EditLessonPage({ params: paramsPromise }: { params: Prom
       router.push(`/admin/courses/${params.id}`)
       router.refresh()
     }
+  }
+
+  async function handleVideoUpload(file: File) {
+    const MAX_SIZE = 100 * 1024 * 1024; // 100MB
+
+    if (file.size > MAX_SIZE) {
+      setUploadProgress(`File too large. Maximum size is 100MB (your file: ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+      setTimeout(() => setUploadProgress(''), 4000);
+      return;
+    }
+
+    setUploading(true)
+    setUploadProgress('Uploading...')
+
+    const publicUrl = await uploadVideoFile(file, params.id, params.lessonId)
+
+    if (publicUrl) {
+      setLesson({ ...lesson, video_url: publicUrl })
+      setUploadProgress('Upload successful!')
+      setSelectedFile(null)
+      setTimeout(() => setUploadProgress(''), 2000)
+    } else {
+      setUploadProgress('Upload failed. Please try again.')
+      setTimeout(() => setUploadProgress(''), 3000)
+    }
+
+    setUploading(false)
   }
 
   if (loading) return (
@@ -116,13 +148,74 @@ export default function EditLessonPage({ params: paramsPromise }: { params: Prom
           <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-1">
             <FileText size={14} className="text-[#00ADEF]" /> Instructional Content (Markdown)
           </label>
-          <textarea 
+          <textarea
             value={lesson.content}
             onChange={(e) => setLesson({...lesson, content: e.target.value})}
             rows={15}
             className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-6 font-mono text-sm leading-relaxed text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all resize-none shadow-inner"
             required
           />
+        </div>
+
+        {/* VIDEO UPLOAD */}
+        <div className="space-y-3">
+          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-1">
+            <Video size={14} className="text-[#00ADEF]" /> Upload Video File
+          </label>
+
+          {lesson.video_url ? (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-green-700 font-medium">✓ Video uploaded</div>
+                <button
+                  type="button"
+                  onClick={() => setLesson({ ...lesson, video_url: '' })}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="text-xs text-green-600 break-all font-mono">{lesson.video_url}</div>
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-[#00ADEF] hover:bg-blue-50/30 transition-all cursor-pointer relative"
+              onClick={() => document.getElementById('video-upload')?.click()}
+            >
+              <input
+                id="video-upload"
+                type="file"
+                accept="video/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setSelectedFile(file)
+                    handleVideoUpload(file)
+                  }
+                }}
+                className="hidden"
+                disabled={uploading}
+              />
+
+              {uploading ? (
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 size={32} className="text-[#00ADEF] animate-spin" />
+                  <p className="text-sm font-semibold text-slate-700">{uploadProgress}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <Upload size={32} className="text-slate-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Click or drag video to upload</p>
+                    <p className="text-xs text-slate-500 mt-1">MP4, WebM, or other video formats (max 100MB)</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {uploadProgress && uploadProgress !== 'Upload successful!' && (
+            <p className="text-[10px] text-slate-500 italic">{uploadProgress}</p>
+          )}
         </div>
 
         <button 

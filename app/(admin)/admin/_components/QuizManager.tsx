@@ -154,7 +154,7 @@ export default function QuizManager({
                 <div key={i} className="relative group">
                 <input
                     placeholder={`Option ${i + 1}`}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pr-12 text-xs font-medium outline-none focus:bg-white focus:border-slate-300 transition-all"
+                    className="w-full  text-black bg-slate-50 border border-slate-200 rounded-xl p-3 pr-12 text-xs font-medium outline-none focus:bg-white focus:border-slate-300 transition-all"
                     value={opt}
                     onChange={(e) => {
                     const opts = [...newQuestion.options];

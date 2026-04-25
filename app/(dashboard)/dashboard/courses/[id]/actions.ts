@@ -1,35 +1,53 @@
-"use server";
+"use server"
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 
-export async function markLessonComplete(
-  courseId: string,
-  lessonId: string
-) {
+export async function markLessonComplete(courseId: string, lessonId: string) {
   const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error("User not authenticated");
+    throw new Error("Not authenticated");
   }
 
-  // Save progress (with course_id for better query performance)
-  const { error } = await supabase.from("user_progress").upsert({
-    user_id: user.id,
-    lesson_id: lessonId,
-    course_id: courseId,
-  });
+  // Avoid `upsert(..., { onConflict })` here: some deployments/tables/views
+  // can reject ON CONFLICT (we've seen this with `user_progress`).
+  // Instead, do an idempotent "check then insert".
+  const { data: existing, error: existingError } = await supabase
+    .from("user_progress")
+    .select("user_id, lesson_id")
+    .eq("user_id", user.id)
+    .eq("lesson_id", lessonId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  if (existing) {
+    revalidatePath(`/dashboard/courses/${courseId}`);
+    revalidatePath(`/dashboard/courses/${courseId}/lessons/${lessonId}`);
+    return { success: true, data: existing };
+  }
+
+  const { data, error } = await supabase
+    .from("user_progress")
+    .insert({
+      user_id: user.id,
+      lesson_id: lessonId,
+      course_id: courseId,
+    })
+    .select("user_id, lesson_id")
+    .single();
 
   if (error) {
-    throw new Error(`Failed to save progress: ${error.message}`);
+    throw new Error(error.message);
   }
 
-  // Revalidate the layout to refresh sidebar data
-  revalidatePath(`/dashboard/courses/${courseId}`, "layout");
-
-  return true;
+  // Purge cache to update sidebar
+  revalidatePath(`/dashboard/courses/${courseId}`);
+  revalidatePath(`/dashboard/courses/${courseId}/lessons/${lessonId}`);
+  
+  return { success: true, data };
 }
