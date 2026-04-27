@@ -4,7 +4,7 @@ import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { verifyOTP, resendOTP } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
-import { isRedirectError } from "next/dist/client/components/redirect-error"; // Added for redirect handling
+import { isRedirectError } from "next/dist/client/components/redirect-error"; 
 import {
   InputOTP,
   InputOTPGroup,
@@ -26,11 +26,10 @@ function VerifyForm() {
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(60); // 60 second countdown
+  const [countdown, setCountdown] = useState(60); 
   const [canResend, setCanResend] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  // Handle countdown timer
   useEffect(() => {
     if (countdown <= 0) {
       setCanResend(true);
@@ -47,19 +46,20 @@ function VerifyForm() {
   async function handleVerify() {
     setIsLoading(true);
     setError(null);
+    
+    // DEBUG: Just to show you it's sending the code to your backend logic
+    console.log(`Attempting verification for ${email} with code ${code}...`);
 
     try {
+      // This calls the logic we "injected" into your actions file
       const result = await verifyOTP(email, code);
 
       if (result?.error) {
         setError(result.error);
-        setIsLoading(false); // Only stop loading if there is a functional error
+        setIsLoading(false);
       }
-      // Note: If successful, the redirect happens here and is caught by the 'catch'
     } catch (e) {
-      // Check if the "error" is actually a Next.js redirect
       if (isRedirectError(e)) {
-        // Re-throw it so Next.js can handle the navigation
         throw e;
       }
 
@@ -79,7 +79,6 @@ function VerifyForm() {
         setError(result.error);
         setIsResending(false);
       } else {
-        // Reset countdown
         setCountdown(60);
         setCanResend(false);
         setCode("");
@@ -99,7 +98,7 @@ function VerifyForm() {
         </CardTitle>
         <CardDescription className="text-slate-500 mt-2">
           Enter the 6-digit OTP sent to <br />
-          <span className="font-semibold text-rebus-purple">{email}</span>
+          <span className="font-semibold text-[#00ADEF]">{email}</span>
           <p className="mt-4 text-[11px] leading-relaxed">
             Can&apos;t find it? Please check your{" "}
             <span className="font-bold text-slate-700">Spam</span> or{" "}
@@ -114,31 +113,13 @@ function VerifyForm() {
           onChange={(val) => setCode(val)}
           disabled={isLoading}
         >
-          <InputOTPGroup className="">
-            <InputOTPSlot
-              index={0}
-              className="border-1 size-12 text-lg font-bold"
-            />
-            <InputOTPSlot
-              index={1}
-              className="border-1 size-12 text-lg font-bold"
-            />
-            <InputOTPSlot
-              index={2}
-              className="border-1 size-12 text-lg font-bold"
-            />
-            <InputOTPSlot
-              index={3}
-              className="border-1 size-12 text-lg font-bold"
-            />
-            <InputOTPSlot
-              index={4}
-              className="border-1 size-12 text-lg font-bold"
-            />
-            <InputOTPSlot
-              index={5}
-              className="border-1 size-12 text-lg font-bold"
-            />
+          <InputOTPGroup>
+            <InputOTPSlot index={0} className="border-1 size-12 text-lg font-bold" />
+            <InputOTPSlot index={1} className="border-1 size-12 text-lg font-bold" />
+            <InputOTPSlot index={2} className="border-1 size-12 text-lg font-bold" />
+            <InputOTPSlot index={3} className="border-1 size-12 text-lg font-bold" />
+            <InputOTPSlot index={4} className="border-1 size-12 text-lg font-bold" />
+            <InputOTPSlot index={5} className="border-1 size-12 text-lg font-bold" />
           </InputOTPGroup>
         </InputOTP>
 
@@ -153,7 +134,7 @@ function VerifyForm() {
         <div className="w-full space-y-4">
           <Button
             onClick={handleVerify}
-            className="w-full bg-rebus-blue hover:bg-rebus-blue/80 text-white py-7 rounded-xl font-semibold uppercase text-xs transition-all shadow-xl shadow-slate-200"
+            className="w-full bg-[#00ADEF] hover:bg-[#00ADEF]/80 text-white py-7 rounded-xl font-semibold uppercase text-xs transition-all shadow-xl shadow-slate-200"
             disabled={code.length !== 6 || isLoading}
           >
             {isLoading ? (
@@ -171,7 +152,7 @@ function VerifyForm() {
             disabled={!canResend || isResending}
             className={`w-full text-[10px] font-semibold uppercase tracking-widest py-3 px-4 rounded-lg transition-all ${
               canResend
-                ? "bg-slate-100 hover:bg-slate-200 text-rebus-blue"
+                ? "bg-slate-100 hover:bg-slate-200 text-[#00ADEF]"
                 : "bg-slate-50 text-slate-400 cursor-not-allowed"
             }`}
           >
@@ -202,7 +183,6 @@ function VerifyForm() {
 export default function VerifyPage() {
   return (
     <div className="min-h-screen items-center justify-center p-4 bg-[#F8FAFC] flex relative overflow-hidden">
-      {/* Subtle UI Accents */}
       <div className="absolute top-[-10%] right-[-10%] w-[30%] h-[30%] bg-[#00ADEF]/5 rounded-full blur-[100px]" />
 
       <Suspense
