@@ -28,7 +28,7 @@ export default async function CourseCatalogPage() {
       
       {/* Header: Responsive text alignment and sizing */}
       <header className="space-y-3 border-b border-slate-200 pb-8">
-        <h2 className="text-3xl md:text-4xl font-black tracking-tight text-black">
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">
           Explore Courses
         </h2>
         <p className="text-sm md:text-base text-slate-500 font-medium leading-relaxed max-w-2xl">

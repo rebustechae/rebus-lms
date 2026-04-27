@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { verifyOTP } from '@/app/(auth)/actions'
+import { verifyOTP, resendOTP } from '@/app/(auth)/actions'
 import { Button } from '@/components/ui/button'
 import { isRedirectError } from "next/dist/client/components/redirect-error"; // Added for redirect handling
 import {
@@ -20,6 +20,23 @@ function VerifyForm() {
     const [code, setCode] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [countdown, setCountdown] = useState(60) // 60 second countdown
+    const [canResend, setCanResend] = useState(false)
+    const [isResending, setIsResending] = useState(false)
+
+    // Handle countdown timer
+    useEffect(() => {
+        if (countdown <= 0) {
+            setCanResend(true)
+            return
+        }
+
+        const timer = setTimeout(() => {
+            setCountdown(countdown - 1)
+        }, 1000)
+
+        return () => clearTimeout(timer)
+    }, [countdown])
 
     async function handleVerify() {
         setIsLoading(true)
@@ -42,6 +59,29 @@ function VerifyForm() {
 
             setError('Invalid or expired code. Please try again.')
             setIsLoading(false)
+        }
+    }
+
+    async function handleResendOTP() {
+        setIsResending(true)
+        setError(null)
+
+        try {
+            const result = await resendOTP(email)
+            
+            if (result?.error) {
+                setError(result.error)
+                setIsResending(false)
+            } else {
+                // Reset countdown
+                setCountdown(60)
+                setCanResend(false)
+                setCode('')
+                setIsResending(false)
+            }
+        } catch (e) {
+            setError('Failed to resend OTP. Please try again.')
+            setIsResending(false)
         }
     }
 
@@ -94,6 +134,27 @@ function VerifyForm() {
                             "Submit OTP"
                         )}
                     </Button>
+
+                    <button
+                        onClick={handleResendOTP}
+                        disabled={!canResend || isResending}
+                        className={`w-full text-[10px] font-semibold uppercase tracking-widest py-3 px-4 rounded-lg transition-all ${
+                            canResend
+                                ? 'bg-slate-100 hover:bg-slate-200 text-rebus-blue'
+                                : 'bg-slate-50 text-slate-400 cursor-not-allowed'
+                        }`}
+                    >
+                        {isResending ? (
+                            <div className="flex items-center justify-center gap-2">
+                                <Loader2 className='size-3 animate-spin' />
+                                <span>Resending...</span>
+                            </div>
+                        ) : canResend ? (
+                            'Resend OTP'
+                        ) : (
+                            `Resend OTP in ${countdown}s`
+                        )}
+                    </button>
 
                     <button
                         onClick={() => window.location.href = '/login'}

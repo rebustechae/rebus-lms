@@ -109,11 +109,11 @@ export default function FinalCourseQuiz({
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className={`text-3xl md:text-4xl font-black tracking-tighter ${isPass ? "text-[#662D91]" : "text-rose-600"}`}>
+          <span className={`text-3xl md:text-4xl font-semibold tracking-tighter ${isPass ? "text-[#662D91]" : "text-rose-600"}`}>
             {score}%
           </span>
-          <span className="text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
-            Achievement
+          <span className="text-[8px] md:text-[10px] font-medium uppercase tracking-widest text-slate-400 mt-1">
+            Score
           </span>
         </div>
       </div>
@@ -131,15 +131,15 @@ export default function FinalCourseQuiz({
     <div className="max-w-3xl mx-auto py-8 md:py-16 px-4 sm:px-6 space-y-10 md:space-y-12">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-100 pb-6 md:pb-8 gap-4">
         <div className="space-y-1">
-          <Link href={`/dashboard/courses/${params.id}`} className="inline-flex items-center gap-2 text-[10px] font-black text-[#00ADEF] mb-2 hover:opacity-70 transition-all uppercase tracking-widest">
+          <Link href={`/dashboard/courses/${params.id}`} className="inline-flex items-center gap-2 text-[10px] font-medium text-[#00ADEF] mb-2 hover:opacity-70 transition-all uppercase tracking-widest">
             <ArrowLeft size={14} strokeWidth={3} /> Exit to Syllabus
           </Link>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-tight">
             Final Assessment
           </h1>
         </div>
         <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 w-fit">
-           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Passing Grade: 90%</span>
+           <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Passing Grade: 90%</span>
         </div>
       </header>
 
@@ -148,12 +148,12 @@ export default function FinalCourseQuiz({
           <ScoreRing score={finalScore} />
 
           <div className="space-y-3">
-            <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-              {finalScore >= 90 ? "Certification Validated" : "Validation Incomplete"}
+            <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+              {finalScore >= 90 ? "You have passed!" : "Assessment failed"}
             </h2>
             <p className="text-sm md:text-base text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
               {finalScore >= 90
-                ? "You have successfully demonstrated mastery. Your credentials have been updated."
+                ? "You have successfully passed the final assessment for this course. Great job! You can now return to the dashboard or review the course materials."
                 : "The passing score for this assessment is 90%. Please review the modules and try again."}
             </p>
           </div>
@@ -181,7 +181,7 @@ export default function FinalCourseQuiz({
           {questions.map((q, idx) => (
             <div key={q.id} className="group space-y-5 md:space-y-6">
               <div className="flex items-start gap-3 md:gap-4">
-                <span className="flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] md:text-xs font-black text-slate-400 group-focus-within:bg-[#00ADEF] group-focus-within:text-white transition-colors">
+                <span className="flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] md:text-xs font-semibold text-slate-400 group-focus-within:bg-[#00ADEF] group-focus-within:text-white transition-colors">
                   {(idx + 1).toString().padStart(2, '0')}
                 </span>
                 <p className="text-lg md:text-xl font-bold text-slate-800 pt-0.5 leading-snug">
@@ -195,9 +195,9 @@ export default function FinalCourseQuiz({
                   <button
                     key={opt}
                     onClick={() => setAnswers({ ...answers, [idx]: opt })}
-                    className={`p-4 text-left text-sm font-bold rounded-xl md:rounded-2xl border-2 transition-all active:scale-[0.98] ${
+                    className={`p-4 text-left text-sm font-medium rounded-xl md:rounded-2xl border-2 transition-all active:scale-[0.98] ${
                       answers[idx] === opt
-                        ? "bg-cyan-50/30 border-[#00ADEF] text-[#00ADEF] ring-4 ring-cyan-50/50"
+                        ? "bg-cyan-50/30 border-[#00ADEF] text-[#00ADEF] font-semibold ring-4 ring-cyan-50/50"
                         : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
                     }`}
                   >
@@ -212,14 +212,14 @@ export default function FinalCourseQuiz({
             <button
               disabled={Object.keys(answers).length < questions.length}
               onClick={calculateResults}
-              className={`w-full py-4 md:py-5 rounded-2xl font-black text-base md:text-lg tracking-wide transition-all flex items-center justify-center gap-2 active:scale-95
+              className={`w-full py-4 md:py-5 rounded-2xl font-medium text-base md:text-lg tracking-wide transition-all flex items-center justify-center gap-2 active:scale-95
                 ${Object.keys(answers).length === questions.length
                   ? "bg-[#00ADEF] text-white hover:bg-[#0096d1] shadow-xl shadow-cyan-500/20"
                   : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}
             >
               Submit Assessment <ChevronRight size={20} />
             </button>
-            <p className="text-center text-[9px] md:text-[11px] text-slate-300 font-bold uppercase tracking-[0.3em] mt-8">
+            <p className="text-center text-[9px] md:text-[11px] text-slate-300 font-medium uppercase mt-8">
               &copy; 2026 Rebus Holdings
             </p>
           </div>

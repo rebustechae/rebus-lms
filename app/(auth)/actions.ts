@@ -50,5 +50,22 @@ export async function signOut() {
 export async function signOutAction() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  redirect('/admin/login')
+  redirect('/admin-login')
+}
+
+export async function resendOTP(email: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+    },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { success: true }
 }

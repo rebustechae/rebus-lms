@@ -108,7 +108,7 @@ export default async function DashboardPage() {
       
       {/* HEADER: Adjusted for mobile stacking */}
       <header className="space-y-4 border-b border-slate-200 pb-8">
-          <h2 className="text-3xl md:text-4xl font-black tracking-tight text-black">
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">
             My Learning
           </h2>
           <div className="flex flex-wrap items-center gap-y-2 gap-x-3 text-xs md:text-sm text-slate-500 font-medium">

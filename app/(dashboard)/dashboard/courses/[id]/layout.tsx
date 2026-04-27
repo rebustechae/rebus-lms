@@ -31,8 +31,8 @@ export default async function CourseLayout({
       <aside className="w-full md:w-80 shrink-0">
         <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden md:sticky md:top-24 shadow-sm">
           <div className="p-5 md:p-6 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-black text-slate-900 text-xs tracking-widest uppercase">Course Syllabus</h3>
-            <p className="text-[10px] text-slate-500 font-bold mt-1">
+            <h3 className="font-bold text-slate-900 text-xs uppercase">Course Syllabus</h3>
+            <p className="text-[10px] text-slate-500 font-semibold mt-1">
                {completedIds.size} / {lessons?.length || 0} MODULES CLEARED
             </p>
           </div>
@@ -64,7 +64,7 @@ export default async function CourseLayout({
                       <Circle size={14} className="text-slate-300 group-hover:text-[#00adef]" />
                     )}
                   </div>
-                  <span className={`text-[10px] md:text-[11px] font-bold uppercase tracking-tight leading-tight ${
+                  <span className={`text-[10px] md:text-[11px] font-medium uppercase tracking-tight leading-tight ${
                     isCompleted ? "text-slate-400" : "text-slate-700"
                   }`}>
                     {lesson.title}

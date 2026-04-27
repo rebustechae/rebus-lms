@@ -33,10 +33,10 @@ export default async function CourseDirectory({
         </Link>
 
         <header className="max-w-4xl space-y-3">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight md:leading-[1.1]">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 tracking-tight leading-tight md:leading-[1.1]">
             {course.title}
           </h1>
-          <p className="text-base sm:text-lg text-slate-500 leading-relaxed font-medium">
+          <p className="text-base sm:text-lg text-slate-500 leading-relaxed ">
             {course.description}
           </p>
         </header>

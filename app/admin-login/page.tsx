@@ -2,11 +2,13 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { ShieldCheck, LockKeyhole, ArrowRight, Fingerprint } from "lucide-react";
 
-export default function AdminLoginPage({
+export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: { message: string };
+  searchParams: Promise<{ message?: string }>;
 }) {
+  const params = await searchParams;
+
   async function adminSignIn(formData: FormData) {
     "use server";
 
@@ -20,7 +22,7 @@ export default function AdminLoginPage({
     });
 
     if (error) {
-      return redirect("/admin/login?message=AUTHENTICATION_FAILURE_DENIED");
+      return redirect("/admin-login?message=AUTHENTICATION_FAILURE_DENIED");
     }
 
     return redirect("/admin");
@@ -77,11 +79,11 @@ export default function AdminLoginPage({
           </div>
 
           {/* ERROR HANDLING */}
-          {searchParams?.message && (
+          {params?.message && (
             <div className="mt-8 p-4 bg-red-50 rounded-xl border border-red-100 flex items-center gap-3">
               <Fingerprint size={20} className="text-red-400" />
               <p className="text-[10px] font-bold text-red-600 uppercase leading-tight tracking-tight">
-                {searchParams.message.replace(/_/g, ' ')}
+                {params.message.replace(/_/g, ' ')}
               </p>
             </div>
           )}

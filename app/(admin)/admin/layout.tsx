@@ -8,7 +8,6 @@ import {
   GraduationCap,
   LogOut,
   ShieldCheck,
-  Zap
 } from "lucide-react";
 import { signOutAction } from "@/app/(auth)/actions";
 
@@ -18,11 +17,6 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === "/admin/login";
-
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
 
   const navItems = [
     { name: "Overview", href: "/admin", icon: LayoutDashboard },

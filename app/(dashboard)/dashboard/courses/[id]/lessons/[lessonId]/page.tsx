@@ -1,7 +1,7 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { ChevronRight, CheckCircle2, ChevronLeft } from "lucide-react";
@@ -17,6 +17,7 @@ export default function LessonContentPage({
 }) {
   const params = use(paramsPromise);
   const router = useRouter();
+  const footerRef = useRef<HTMLDivElement>(null);
 
   const [lesson, setLesson] = useState<any>(null);
   const [nextLessonId, setNextLessonId] = useState<string | null>(null);
@@ -104,6 +105,14 @@ export default function LessonContentPage({
     })();
   }, [videoCompleted, completionSaved, loading, params.id, params.lessonId, quiz.length, quizPassed, router, isFirstViewing]);
 
+  useEffect(() => {
+    if (videoCompleted && footerRef.current) {
+      setTimeout(() => {
+        footerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [videoCompleted]);
+
   const handleQuizPass = async () => {
     setQuizPassed(true);
     try {
@@ -134,7 +143,7 @@ export default function LessonContentPage({
         {/* 2. Back Button */}
         <button
           onClick={() => router.push(`/dashboard/courses/${params.id}`)}
-          className="flex items-center gap-2 text-xs md:text-sm font-bold text-slate-400 hover:text-[#00ADEF] transition-colors mb-6 md:mb-10 group uppercase tracking-widest"
+          className="flex items-center gap-2 text-xs md:text-sm font-semibold text-slate-400 hover:text-[#00ADEF] transition-colors mb-6 md:mb-10 group uppercase tracking-widest"
         >
           <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           Back to Directory
@@ -142,12 +151,12 @@ export default function LessonContentPage({
 
         <header className="mb-10 md:mb-16">
           <div className="flex items-center justify-between mb-4 md:mb-6">
-            <span className="bg-slate-100 text-slate-500 text-[9px] md:text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest">
+            <span className="bg-slate-100 text-slate-500 text-[9px] md:text-[11px] font-semibold px-2.5 py-1 rounded-md uppercase tracking-widest">
               Module {lesson.order_index}
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.1] mb-8 md:mb-12">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-semibold text-slate-900 tracking-tight leading-[1.1] mb-8 md:mb-12">
             {lesson.title}
           </h1>
 
@@ -181,7 +190,7 @@ export default function LessonContentPage({
           </div>
         )}
 
-        <footer className="mt-16 md:mt-24 pt-10 border-t border-slate-100">
+        <footer ref={footerRef} className="mt-16 md:mt-24 pt-10 border-t border-slate-100">
           <div className="flex flex-col items-center gap-8">
             <button
               disabled={!videoCompleted || (quiz.length > 0 && !quizPassed)}
@@ -192,7 +201,7 @@ export default function LessonContentPage({
                     : `/dashboard/courses/${params.id}/final-quiz`,
                 )
               }
-              className={`w-full py-4 md:py-6 rounded-2xl font-black transition-all flex items-center justify-center gap-3 text-white uppercase tracking-widest text-xs md:text-sm
+              className={`w-full py-4 md:py-6 rounded-2xl font-semibold transition-all flex items-center justify-center gap-3 text-white text-xs md:text-sm
                 ${
                   videoCompleted && (quiz.length === 0 || quizPassed)
                     ? nextLessonId
@@ -210,7 +219,7 @@ export default function LessonContentPage({
               <ChevronRight size={18} />
             </button>
 
-            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.3em]">
+            <p className="text-[10px] text-slate-300 font-bold uppercase">
               &copy; 2026 Rebus Holdings
             </p>
           </div>
