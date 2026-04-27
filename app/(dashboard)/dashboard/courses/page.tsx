@@ -1,21 +1,24 @@
 import { createClient } from "@/utils/supabase/server";
-import { BookOpen, Play, CheckCircle2 } from "lucide-react";
+import { BookOpen, Play, CheckCircle2, Lock } from "lucide-react";
 import Link from "next/link";
 
 export default async function CourseCatalogPage() {
   const supabase = await createClient();
 
-  // 1. Get the current user first to filter completions
+  // 1. Get the current user
   const { data: { user } } = await supabase.auth.getUser();
+  const userEmail = user?.email?.toLowerCase();
 
-  // 2. Fetch courses with filtered completions
-  const { data: courses, error } = await supabase
+  // 2. Fetch courses with completions AND whitelist info
+  // We fetch 'course_access' to check if the user is whitelisted
+  const { data: allCourses, error } = await supabase
     .from("courses")
     .select(`
       *,
-      course_completions(id)
+      course_completions(id),
+      course_access(user_email)
     `)
-    .eq('course_completions.user_id', user?.id) // FIX: Only fetch completions for this user
+    .eq('course_completions.user_id', user?.id)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -26,6 +29,19 @@ export default async function CourseCatalogPage() {
       </div>
     );
   }
+
+  // 3. FILTER: Only show courses the user is allowed to see
+  const visibleCourses = allCourses?.filter(course => {
+    // If course is public, everyone sees it
+    if (!course.is_private) return true;
+
+    // If private, check if the user's email exists in the whitelist for this course
+    const isWhitelisted = course.course_access?.some(
+      (access: any) => access.user_email.toLowerCase() === userEmail
+    );
+
+    return isWhitelisted;
+  });
 
   return (
     <div className="space-y-8 md:space-y-12 max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10">
@@ -40,8 +56,7 @@ export default async function CourseCatalogPage() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-        {courses?.map((course) => {
-          // FIX: Since we filtered the query, length > 0 now correctly means THIS user completed it
+        {visibleCourses?.map((course) => {
           const isCompleted = course.course_completions && course.course_completions.length > 0;
 
           return (
@@ -52,6 +67,13 @@ export default async function CourseCatalogPage() {
               {isCompleted && (
                 <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-green-500 rounded-full p-1 shadow-lg shadow-green-200 animate-in zoom-in duration-300">
                   <CheckCircle2 size={20} className="text-white md:w-6 md:h-6" />
+                </div>
+              )}
+
+              {/* Private Badge */}
+              {course.is_private && (
+                <div className="absolute top-4 right-4 text-slate-400">
+                  <Lock size={14} />
                 </div>
               )}
 
@@ -85,10 +107,10 @@ export default async function CourseCatalogPage() {
         })}
       </div>
 
-      {courses?.length === 0 && (
+      {visibleCourses?.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 md:p-20 text-center bg-slate-50/50">
           <p className="text-sm md:text-base text-slate-400 font-bold uppercase tracking-widest">
-            No courses available at the moment.
+            No authorized courses available.
           </p>
         </div>
       )}
