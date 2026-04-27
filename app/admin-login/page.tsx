@@ -16,15 +16,19 @@ export default async function AdminLoginPage({
     const password = formData.get("password") as string;
     const supabase = await createClient();
 
+    // 1. Attempt sign in
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    // 2. Handle errors
     if (error) {
       return redirect("/admin-login?message=AUTHENTICATION_FAILURE_DENIED");
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    
     return redirect("/admin");
   }
 
@@ -71,7 +75,7 @@ export default async function AdminLoginPage({
               />
             </div>
 
-            <button className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 group mt-4">
+            <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 group mt-4">
               <LockKeyhole size={18} /> 
               Sign-in
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />

@@ -8,27 +8,22 @@ export default async function AdminGroupLayout({
 }) {
   const supabase = await createClient();
 
-  // Get the current user
+  // 1. Get user
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/admin-login");
 
-  // If not authenticated, redirect to admin login
-  if (!user) {
-    return redirect("/admin-login");
-  }
-
-  // Check if user has admin role
+  // 2. Get profile (This will now work thanks to the SQL fix)
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
 
-  // If not admin, redirect to login
+  // 3. Final Admin Gate
   if (!profile || profile.role !== "admin") {
-    return redirect("/admin-login");
+    console.log("Access Denied: Not an admin");
+    redirect("/admin-login");
   }
 
   return <>{children}</>;
 }
-
-

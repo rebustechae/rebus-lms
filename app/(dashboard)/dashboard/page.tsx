@@ -13,9 +13,16 @@ export default async function DashboardPage() {
 
   const userEmail = user?.email?.toLowerCase();
 
+  // FIX: Added .eq filter to course_completions so it only pulls records for the logged-in user
   const { data: courses } = await supabase
     .from("courses")
-    .select(`*, lessons (id), course_completions (passed), course_access (user_email)`)
+    .select(`
+      *, 
+      lessons (id), 
+      course_completions (passed), 
+      course_access (user_email)
+    `)
+    .eq('course_completions.user_id', user?.id) 
     .order("created_at", { ascending: false });
 
   const { data: userProgress } = await supabase
@@ -34,7 +41,11 @@ export default async function DashboardPage() {
     const totalLessons = course.lessons?.length || 0;
     const completedInThisCourse = userProgress?.filter((p: any) => p.lessons?.course_id === course.id).length || 0;
     const progressPercent = totalLessons > 0 ? Math.round((completedInThisCourse / totalLessons) * 100) : 0;
-    const isFulllyCompleted = course.course_completions?.[0]?.passed || false;
+    
+    // FIX: Check if the completion array actually has a record for THIS user
+    const isFulllyCompleted = course.course_completions && course.course_completions.length > 0 
+      ? course.course_completions[0].passed 
+      : false;
 
     return {
       ...course,
@@ -103,10 +114,7 @@ export default async function DashboardPage() {
   );
 
   return (
-    /* Added responsive horizontal padding and reduced vertical gap on mobile */
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12 space-y-8 md:space-y-12">
-      
-      {/* HEADER: Adjusted for mobile stacking */}
       <header className="space-y-4 border-b border-slate-200 pb-8">
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-black">
             My Learning
@@ -124,7 +132,6 @@ export default async function DashboardPage() {
           </div>
       </header>
 
-      {/* ACTIVE COURSES: 1 col on mobile, 2 cols on tablet/desktop */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 text-slate-900">
           <Activity size={18} className="text-rebus-blue" />
@@ -149,7 +156,6 @@ export default async function DashboardPage() {
         )}
       </section>
 
-      {/* COMPLETED COURSES */}
       {completedCourses.length > 0 && (
         <section className="space-y-6">
           <div className="flex items-center gap-2 text-emerald-600">

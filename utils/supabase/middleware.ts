@@ -38,26 +38,8 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // This refreshes the session if it's expired
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const url = request.nextUrl.clone()
-
-  // --- ADMIN REDIRECT LOGIC ---
-  const isAdminPath = url.pathname.startsWith('/admin')
-  const isAdminLoginPage = url.pathname === '/admin/login'
-
-  // If they want /admin but aren't logged in, send to /admin/login
-  if (isAdminPath && !isAdminLoginPage && !user) {
-    url.pathname = '/admin/login'
-    return NextResponse.redirect(url)
-  }
-
-  // --- STUDENT/DASHBOARD REDIRECT LOGIC ---
-  if (url.pathname.startsWith('/dashboard') && !user) {
-    url.pathname = '/login' // Assuming /login is your student OTP page
-    return NextResponse.redirect(url)
-  }
+  // Refresh session if it exists
+  await supabase.auth.getUser()
 
   return response
 }
