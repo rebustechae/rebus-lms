@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
-import { CheckCircle2, Circle, Lock } from "lucide-react";
+import { CheckCircle2, Circle, Lock, LayoutGrid } from "lucide-react";
 import { getLessonsForCourse, getUserProgressForCourse } from "@/lib/queries";
 
 export const revalidate = 30;
@@ -24,61 +24,86 @@ export default async function CourseLayout({
   }
 
   return (
-    /* 1. Use flex-col-reverse on mobile so content appears first, then syllabus below */
-    <div className="flex flex-col-reverse md:flex-row min-h-screen gap-6 md:gap-10 bg-white p-4 md:p-8">
-      
-      {/* Sidebar: Full width on mobile, 320px on desktop */}
-      <aside className="w-full md:w-80 shrink-0">
-        <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden md:sticky md:top-24 shadow-sm">
-          <div className="p-5 md:p-6 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-900 text-xs uppercase">Course Syllabus</h3>
-            <p className="text-[10px] text-slate-500 font-semibold mt-1">
-               {completedIds.size} / {lessons?.length || 0} MODULES CLEARED
-            </p>
+    <div className="flex flex-col md:flex-row min-h-screen bg-white">
+      <aside className="w-full md:w-80 border-r border-slate-100 flex flex-col h-auto md:h-screen sticky top-0 bg-slate-50/30">
+        
+        {/* Course Header Info */}
+        <div className="p-6 border-b border-slate-100 bg-white">
+          <Link 
+            href="/dashboard" 
+            className="flex items-center gap-2 text-[10px] font-bold text-[#00ADEF] mb-4 uppercase tracking-widest hover:underline"
+          >
+            <LayoutGrid size={14} /> Back to Courses
+          </Link>
+          
+          <h3 className="font-semibold text-slate-900 text-sm uppercase mb-1 tracking-tighter">
+            Course Syllabus
+          </h3>
+          <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-emerald-500 transition-all duration-500" 
+              style={{ width: `${(completedIds.size / (lessons?.length || 1)) * 100}%` }}
+            />
           </div>
+          <p className="text-[10px] text-slate-500 font-semibold mt-2 uppercase">
+            {completedIds.size} / {lessons?.length || 0} Modules Complete
+          </p>
+        </div>
 
-          <nav className="p-2 md:p-3 space-y-1">
-            {lessons?.map((lesson, idx) => {
-              const isCompleted = completedIds.has(lesson.id);
-              const isFirstLesson = idx === 0;
-              const isUnlocked = isFirstLesson || completedIds.has(lessons[idx - 1]?.id);
+        {/* Scrollable Lesson List */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {lessons?.map((lesson, idx) => {
+            const isCompleted = completedIds.has(lesson.id);
+            const isFirstLesson = idx === 0;
+            const isUnlocked = isFirstLesson || completedIds.has(lessons[idx - 1]?.id);
 
-              return (
-                <Link
-                  key={lesson.id}
-                  href={isUnlocked ? `/dashboard/courses/${id}/lessons/${lesson.id}` : "#"}
-                  className={`flex items-center gap-3 p-3 md:p-4 rounded-2xl transition-all ${
-                    !isUnlocked 
-                      ? "opacity-30 cursor-not-allowed" 
-                      : "hover:bg-slate-50 group active:scale-[0.98]"
-                  }`}
-                >
-                  <div className="shrink-0">
-                    {isCompleted ? (
-                      <div className="p-0.5 rounded-full text-emerald-500 bg-emerald-50">
-                        <CheckCircle2 size={12} strokeWidth={3} />
-                      </div>
-                    ) : !isUnlocked ? (
-                      <Lock size={12} className="text-slate-400" />
-                    ) : (
-                      <Circle size={14} className="text-slate-300 group-hover:text-[#00adef]" />
-                    )}
-                  </div>
-                  <span className={`text-[10px] md:text-[11px] font-medium uppercase tracking-tight leading-tight ${
-                    isCompleted ? "text-slate-400" : "text-slate-700"
-                  }`}>
-                    {lesson.title}
-                  </span>
-                </Link>
-              );
-            })}
-          </nav>
+            return (
+              <Link
+                key={lesson.id}
+                href={isUnlocked ? `/dashboard/courses/${id}/lessons/${lesson.id}` : "#"}
+                className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${
+                  !isUnlocked 
+                    ? "opacity-40 cursor-not-allowed" 
+                    : "hover:bg-white hover:shadow-sm group active:scale-[0.98]"
+                }`}
+              >
+                <div className="shrink-0">
+                  {isCompleted ? (
+                    <div className="p-1 rounded-full text-emerald-600 bg-emerald-100/50">
+                      <CheckCircle2 size={14} strokeWidth={3} />
+                    </div>
+                  ) : !isUnlocked ? (
+                    <Lock size={14} className="text-slate-400" />
+                  ) : (
+                    <Circle size={16} className="text-slate-300 group-hover:text-[#00adef] transition-colors" />
+                  )}
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
+                        Module {(idx + 1).toString().padStart(2, '0')}
+                    </span>
+                    <span className={`text-[11px] font-medium leading-tight ${
+                        isCompleted ? "text-slate-400" : "text-slate-700"
+                    }`}>
+                        {lesson.title}
+                    </span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer info for sidebar */}
+        <div className="p-6 border-t border-slate-100 bg-white/50 hidden md:block">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">
+                &copy; 2026 Rebus Holdings
+            </p>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full min-w-0">
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* MAIN LESSON CONTENT */}
+      <main className="flex-1 bg-white min-h-screen overflow-y-auto">
+        <div className="max-w-4xl mx-auto p-4 md:p-12 lg:p-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {children}
         </div>
       </main>

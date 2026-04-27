@@ -4,11 +4,13 @@ import { useState, useRef, useEffect } from "react";
 import {
   Play,
   Pause,
+  RotateCcw,
+  RotateCw,
+  SkipBack,
+  SkipForward,
   Volume2,
   VolumeX,
   Lock,
-  ChevronLeft,
-  ChevronRight,
   Maximize,
   Minimize,
 } from "lucide-react";
@@ -54,17 +56,6 @@ export default function VideoPlayer({
   }, []);
 
   useEffect(() => {
-    setError(null);
-    setCurrentTime(0);
-    setDuration(0);
-    setPlaying(false);
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-    }
-  }, [videoUrl]);
-
-  useEffect(() => {
     if (!videoRef.current) return;
     if (playing) {
       videoRef.current.play().catch((e) => {
@@ -86,15 +77,6 @@ export default function VideoPlayer({
     onVideoProgress(progress);
   };
 
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) setDuration(videoRef.current.duration);
-  };
-
-  const handleEnded = () => {
-    setPlaying(false);
-    onVideoComplete();
-  };
-
   const handleSeek = (newTime: number) => {
     if (isFirstViewing && newTime > currentTime) return;
     if (videoRef.current) {
@@ -110,285 +92,129 @@ export default function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const [showControls, setShowControls] = useState(true);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleMouseMove = () => {
-    if (!isFullscreen) return;
-    setShowControls(true);
-    
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
-    
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (playing) {
-        setShowControls(false);
-      }
-    }, 3000);
-  };
-
   return (
     <div 
       ref={containerRef} 
-      className={`w-full bg-slate-900 overflow-hidden shadow-2xl transition-all ${
-        isFullscreen ? "rounded-0" : "rounded-xl md:rounded-[2rem]"
+      className={`w-full bg-black overflow-hidden shadow-2xl transition-all relative group/container ${
+        isFullscreen ? "rounded-0" : "rounded-xl md:rounded-[2rem] aspect-video"
       }`}
-      onMouseMove={handleMouseMove}
     >
-      {/* Video Container: Maintains aspect ratio on all devices */}
-      <div className="relative bg-black aspect-video flex items-center justify-center group">
-        {videoUrl ? (
-          <>
-            {error && (
-              <div className="absolute inset-0 bg-red-900/60 border border-red-500 flex items-center justify-center z-20">
-                <div className="text-center text-white px-6">
-                  <p className="font-bold uppercase tracking-tight text-sm md:text-base">Video Error</p>
-                  <p className="text-[10px] md:text-xs mt-1 opacity-70">{error}</p>
-                </div>
-              </div>
-            )}
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onEnded={handleEnded}
-              onClick={() => setPlaying(!playing)}
-              onError={() => setError("Failed to load video source.")}
-              className="w-full h-full cursor-pointer"
-              playsInline
-            />
-          </>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
-            <p className="text-[10px] md:text-xs font-black uppercase tracking-widest">Source Missing</p>
-          </div>
-        )}
+      <video
+        ref={videoRef}
+        src={videoUrl}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
+        onEnded={() => { setPlaying(false); onVideoComplete(); }}
+        onClick={() => setPlaying(!playing)}
+        className="w-full h-full cursor-pointer"
+        playsInline
+      />
 
-        {/* Locked Badged */}
-        {isFirstViewing && (
-          <div className="absolute top-3 right-3 md:top-5 md:right-5 lg:top-8 lg:right-8 z-30 pointer-events-none">
-            <div className="bg-[#00ADEF]/90 backdrop-blur-md text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-full flex items-center gap-2 text-[9px] md:text-[11px] font-black shadow-2xl border border-white/20 uppercase tracking-widest animate-in fade-in slide-in-from-top-2 duration-300">
-              <Lock size={12} strokeWidth={3} className="md:w-4 md:h-4" />
-              <span>Seeking Locked</span>
-            </div>
-          </div>
-        )}
-
-        {/* Control Bar */}
-        <div className={`${
-          isFullscreen 
-            ? "absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent transition-opacity duration-300"
-            : "hidden"
-        }`}
-          style={{
-            opacity: isFullscreen && !showControls ? 0 : 1,
-            pointerEvents: isFullscreen && !showControls ? 'none' : 'auto',
-          }}
-        >
-          <div className="p-6 lg:p-8 space-y-4 lg:space-y-6">
-            
-            {/* Progress Bar */}
-            <div
-              onClick={(e) => {
-                if (!duration) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const percent = (e.clientX - rect.left) / rect.width;
-                handleSeek(percent * duration);
-              }}
-              className="relative h-6 flex items-center cursor-pointer group"
-            >
-              <div className="w-full h-1.5 md:h-2 bg-slate-700/50 rounded-full overflow-hidden">
-                 <div
-                   className="h-full bg-[#00ADEF] rounded-full transition-all"
-                   style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                 />
-              </div>
-
-              <div 
-                className="absolute h-4 w-4 md:h-5 md:w-5 bg-white rounded-full border-2 border-[#00ADEF] shadow-lg transition-transform scale-110 md:scale-100 group-hover:scale-125"
-                style={{ 
-                  left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
-                  transform: 'translateX(-50%)'
-                }}
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
-              {/* Play / Skip */}
-              <div className="flex items-center gap-1.5 md:gap-4">
-                <button
-                  onClick={() => setPlaying(!playing)}
-                  className="p-2 md:p-4 hover:bg-slate-700 rounded-xl text-white transition-all active:scale-90"
-                >
-                  {playing ? <Pause size={24} className="md:w-8 md:h-8" fill="white" /> : <Play size={24} className="md:w-8 md:h-8" fill="white" />}
-                </button>
-                
-                <div className="flex items-center gap-1 md:gap-2">
-                  <button
-                    onClick={() => handleSeek(Math.max(0, currentTime - 10))}
-                    className="p-2 md:p-3 hover:bg-slate-700 rounded-xl text-white flex items-center gap-1.5 transition-colors"
-                  >
-                    <ChevronLeft size={20} /> 
-                    <span className="text-[10px] md:text-xs font-medium">10S</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => handleSeek(Math.min(duration, currentTime + 10))}
-                    disabled={isFirstViewing}
-                    className={`p-2 md:p-3 rounded-xl flex items-center gap-1.5 transition-colors ${
-                      isFirstViewing ? "text-slate-600 cursor-not-allowed" : "text-white hover:bg-slate-700"
-                    }`}
-                  >
-                    <span className="text-[10px] md:text-xs font-medium">10S</span>
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Time / Volume / Fullscreen */}
-              <div className="flex items-center gap-2 md:gap-6 lg:gap-8">
-                {/* Time */}
-                <div className="hidden sm:block text-white text-[10px] md:text-xs lg:text-sm font-medium bg-slate-900/50 px-3 py-2 md:px-4 md:py-3 rounded-xl uppercase tracking-tight">
-                  {formatTime(currentTime)} <span className="text-slate-500 mx-1">/</span> {formatTime(duration)}
-                </div>
-
-                {/* Volume: Visible on Tablet (sm and up) */}
-                <div className="flex items-center gap-2 md:gap-3 bg-slate-700/50 px-2.5 md:px-4 py-2 md:py-3 rounded-2xl">
-                  <button onClick={() => setMuted(!muted)} className="text-white hover:text-[#00ADEF] transition-colors">
-                    {muted ? <VolumeX size={20} className="md:w-6 md:h-6" /> : <Volume2 size={20} className="md:w-6 md:h-6" />}
-                  </button>
-                  <input
-                    type="range" min={0} max={1} step={0.05}
-                    value={muted ? 0 : volume}
-                    onChange={(e) => {
-                      const vol = parseFloat(e.target.value);
-                      setVolume(vol);
-                      if (vol > 0) setMuted(false);
-                    }}
-                    className="hidden sm:block w-16 md:w-24 lg:w-32 h-1.5 bg-slate-600 rounded-full accent-[#00ADEF] cursor-pointer"
-                  />
-                </div>
-
-                <button
-                  onClick={toggleFullscreen}
-                  className="p-2 md:p-4 hover:bg-slate-700 rounded-2xl text-white transition-all active:scale-95"
-                >
-                  {isFullscreen ? <Minimize size={22} className="md:w-7 md:h-7" /> : <Maximize size={22} className="md:w-7 md:h-7" />}
-                </button>
-              </div>
-            </div>
-            
-            {/* Mobile-Only Time Rail */}
-            <div className="sm:hidden flex justify-between text-white text-[9px] font-medium opacity-40 uppercase tracking-[0.2em] px-1">
-               <span>{formatTime(currentTime)}</span>
-               <span>{formatTime(duration)}</span>
-            </div>
+      {/* Locked Badge */}
+      {isFirstViewing && (
+        <div className="absolute top-4 right-4 z-30 pointer-events-none">
+          <div className="bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-white/10 shadow-xl">
+            <Lock size={12} className="text-[#00ADEF]" />
+            <span>Seeking Locked</span>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Control Bar */}
-      <div className={`${isFullscreen ? "hidden" : "block"} bg-slate-800 p-2 md:px-4 md:py-4 space-y-4`}>
+      {/* --- CONTROL BAR --- */}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent">
         
-        {/* Progress Bar with Enhanced Hit-Area */}
+        {/* Progress Bar */}
         <div
           onClick={(e) => {
-            if (!duration) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const percent = (e.clientX - rect.left) / rect.width;
             handleSeek(percent * duration);
           }}
-          className="relative h-6 flex items-center cursor-pointer group"
+          className="relative h-1.5 w-full bg-white/20 cursor-pointer group/rail"
         >
-          <div className="w-full h-1.5 md:h-2 bg-slate-700/50 rounded-full overflow-hidden">
-             <div
-               className="h-full bg-[#00ADEF] rounded-full transition-all"
-               style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-             />
-          </div>
-
+          <div className="h-full bg-white/40 absolute top-0 left-0 w-full" />
+          <div
+            className="h-full bg-white absolute top-0 left-0 transition-all"
+            style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+          />
           <div 
-            className="absolute h-4 w-4 md:h-5 md:w-5 bg-white rounded-full border-2 border-[#00ADEF] shadow-lg transition-transform scale-110 md:scale-100 group-hover:scale-125"
-            style={{ 
-              left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
-              transform: 'translateX(-50%)'
-            }}
+            className="absolute h-3 w-3 bg-white rounded-full top-1/2 -translate-y-1/2 opacity-0 group-hover/rail:opacity-100 transition-opacity shadow-lg"
+            style={{ left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`, transform: 'translate(-50%, -50%)' }}
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
-          {/* Play / Skip */}
-          <div className="flex items-center gap-1.5 md:gap-4">
-            <button
-              onClick={() => setPlaying(!playing)}
-              className="p-2 md:p-4 hover:bg-slate-700 rounded-2xl text-white transition-all active:scale-90"
-            >
-              {playing ? <Pause size={24} className="md:w-8 md:h-8" /> : <Play size={24} className="md:w-8 md:h-8" fill="white" />}
+        {/* Controls Row */}
+        <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
+          
+          <div className="flex items-center gap-4 md:gap-6">
+            <button onClick={() => setPlaying(!playing)} className="text-white">
+              {playing ? <Pause size={24} fill="white" /> : <Play size={24} fill="white" />}
             </button>
-            
-            <div className="flex items-center gap-1 md:gap-2">
-              <button
-                onClick={() => handleSeek(Math.max(0, currentTime - 10))}
-                className="p-2 md:p-3 hover:bg-slate-700 rounded-xl text-white flex items-center gap-1.5 transition-colors"
-              >
-                <ChevronLeft size={20} /> 
-                <span className="text-[10px] md:text-xs font-medium">10S</span>
+
+            <div className="flex items-center gap-3 md:gap-5">
+              <button onClick={() => handleSeek(currentTime - 10)} className="relative text-white">
+                <RotateCcw size={22} />
+                <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold mt-0.5">10</span>
               </button>
-              
-              <button
-                onClick={() => handleSeek(Math.min(duration, currentTime + 10))}
+
+              <button 
+                onClick={() => handleSeek(currentTime + 10)} 
                 disabled={isFirstViewing}
-                className={`p-2 md:p-3 rounded-xl flex items-center gap-1.5 transition-colors ${
-                  isFirstViewing ? "text-slate-600 cursor-not-allowed" : "text-white hover:bg-slate-700"
-                }`}
+                className={`relative ${isFirstViewing ? 'opacity-30' : 'text-white'}`}
               >
-                <span className="text-[10px] md:text-xs font-medium">10S</span>
-                <ChevronRight size={20} />
+                <RotateCw size={22} />
+                <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold mt-0.5">10</span>
               </button>
+
+              <button className="text-white hidden sm:block"><SkipBack size={20} fill="white" /></button>
+              <button className="text-white hidden sm:block"><SkipForward size={20} fill="white" /></button>
+            </div>
+
+            <div className="text-white text-xs md:text-sm font-medium">
+              {formatTime(currentTime)} <span className="mx-0.5 opacity-60">/</span> {formatTime(duration)}
             </div>
           </div>
 
-          {/* Time, Volume, Fullscreen */}
-          <div className="flex items-center gap-2 md:gap-6 lg:gap-8">
-            {/* Time */}
-            <div className="hidden sm:block text-white text-[10px] md:text-xs lg:text-sm font-medium bg-slate-900/50 px-3 py-2 md:px-4 md:py-3 rounded-xl uppercase tracking-tight">
-              {formatTime(currentTime)} <span className="text-slate-500 mx-1">/</span> {formatTime(duration)}
-            </div>
-
-            {/* Volume */}
-            <div className="flex items-center gap-2 md:gap-3 bg-slate-700/50 px-2.5 md:px-4 py-2 md:py-3 rounded-2xl">
-              <button onClick={() => setMuted(!muted)} className="text-white hover:text-[#00ADEF] transition-colors">
-                {muted ? <VolumeX size={20} className="md:w-6 md:h-6" /> : <Volume2 size={20} className="md:w-6 md:h-6" />}
+          <div className="flex items-center gap-4 md:gap-6">
+            
+            {/* VERTICAL VOLUME CONTROL */}
+            <div className="relative group/vol flex items-center justify-center">
+              {/* Hidden Volume Slider (Appears on Hover) */}
+              <div className="absolute bottom-full mb-4 px-2 py-4 bg-black/80 backdrop-blur-md rounded-full border border-white/10 opacity-0 invisible group-hover/vol:opacity-100 group-hover/vol:visible transition-all duration-200">
+                <input
+                  type="range" min={0} max={1} step={0.05}
+                  value={muted ? 0 : volume}
+                  onChange={(e) => {
+                    setVolume(parseFloat(e.target.value));
+                    setMuted(false);
+                  }}
+                  className="h-24 w-1 accent-white appearance-none bg-white/20 rounded-full cursor-pointer vertical-slider"
+                  style={{
+                    WebkitAppearance: 'slider-vertical',
+                    writingMode: 'bt-lr'
+                  } as any}
+                />
+              </div>
+              
+              <button onClick={() => setMuted(!muted)} className="text-white">
+                {muted || volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
               </button>
-              <input
-                type="range" min={0} max={1} step={0.05}
-                value={muted ? 0 : volume}
-                onChange={(e) => {
-                  const vol = parseFloat(e.target.value);
-                  setVolume(vol);
-                  if (vol > 0) setMuted(false);
-                }}
-                className="hidden sm:block w-16 md:w-24 lg:w-32 h-1.5 bg-slate-600 rounded-full accent-[#00ADEF] cursor-pointer"
-              />
             </div>
 
-            <button
-              onClick={toggleFullscreen}
-              className="p-2 md:p-4 hover:bg-slate-700 rounded-2xl text-white transition-all active:scale-95"
-            >
-              {isFullscreen ? <Minimize size={22} className="md:w-7 md:h-7" /> : <Maximize size={22} className="md:w-7 md:h-7" />}
+            <button onClick={toggleFullscreen} className="text-white">
+              {isFullscreen ? <Minimize size={22} /> : <Maximize size={22} />}
             </button>
           </div>
-        </div>
-        
-        {/* Mobile-Only Time Rail */}
-        <div className="sm:hidden flex justify-between text-white text-[9px] font-medium opacity-40 uppercase tracking-[0.2em] px-1">
-           <span>{formatTime(currentTime)}</span>
-           <span>{formatTime(duration)}</span>
         </div>
       </div>
+
+      <style jsx>{`
+        .vertical-slider {
+          -webkit-appearance: slider-vertical;
+          width: 4px;
+          height: 100px;
+        }
+      `}</style>
     </div>
   );
 }
