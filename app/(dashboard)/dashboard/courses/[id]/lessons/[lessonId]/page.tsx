@@ -211,7 +211,12 @@ export default function LessonContentPage({
           ) : null}
         </header>
 
-        <article className="prose prose-slate max-w-none text-base md:text-lg select-none leading-relaxed text-slate-700 mt-12 mb-20">
+        <article className="prose prose-slate max-w-none text-base md:text-lg select-none leading-relaxed text-slate-700 
+          [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:my-4 
+          [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:my-4 
+          [&>li]:pl-2 [&>p]:mb-6 
+          [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-slate-900 [&>h2]:mt-10 [&>h2]:mb-4
+          [&>p>a]:text-[#00ADEF] [&>p>a]:font-bold [&>p>a]:underline">
           <ReactMarkdown key={params.lessonId}>{lesson.content}</ReactMarkdown>
         </article>
 
