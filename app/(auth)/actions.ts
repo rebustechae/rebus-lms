@@ -30,15 +30,13 @@ export async function signInWithOTP(prevState: any, formData: FormData) {
 }
 
 export async function verifyOTP(email: string, token: string) {
-  let redirectUrl: string | null = null;
-
   try {
     const supabase = await createClient()
-    
+
     // --- 1. MANUAL OVERRIDE LOGIC ---
     const normalizedEmail = email.toLowerCase().trim();
     console.log(`[Manual OTP] Checking for email: "${normalizedEmail}", token: "${token}"`);
-    
+
     const { data: manualMatch, error: queryError } = await supabase
       .from("manual_otps")
       .select("*")
@@ -54,7 +52,7 @@ export async function verifyOTP(email: string, token: string) {
 
     if (manualMatch) {
       console.log("[Manual OTP] Valid OTP found! Marking as used and generating login link...");
-      
+
       // Mark the code as used
       await supabase.from("manual_otps").update({ used: true }).eq("id", manualMatch.id);
 
@@ -76,34 +74,28 @@ export async function verifyOTP(email: string, token: string) {
       }
 
       if (adminData?.properties?.action_link) {
-        console.log("[Manual OTP] Success! Setting redirect URL...");
-        redirectUrl = adminData.properties.action_link;
+        console.log("[Manual OTP] Success! Redirecting to dashboard...");
+        redirect(adminData.properties.action_link);
       }
-    } else {
-      console.log("[Manual OTP] No manual match. Falling back to standard OTP...");
-      
-      // --- 2. STANDARD SUPABASE OTP LOGIC ---
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      })
-
-      if (error) return { error: error.message }
-      
-      redirectUrl = '/dashboard';
     }
+
+    // --- 2. STANDARD SUPABASE OTP LOGIC ---
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    })
+
+    if (error) return { error: error.message }
+
+    redirect('/dashboard');
+
   } catch (err) {
     // CRITICAL: If Next.js is trying to redirect, let it!
     if (isRedirectError(err)) throw err;
 
     console.error("[verifyOTP] Unhandled error:", err);
     return { error: `Verification error: ${err instanceof Error ? err.message : 'Unknown error'}` };
-  }
-
-  // Perform the redirect outside of the try/catch block
-  if (redirectUrl) {
-    redirect(redirectUrl);
   }
 }
 

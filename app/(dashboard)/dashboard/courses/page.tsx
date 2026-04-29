@@ -109,7 +109,7 @@ export default async function CourseCatalogPage() {
 
       {visibleCourses?.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 md:p-20 text-center bg-slate-50/50">
-          <p className="text-sm md:text-base text-slate-400 font-bold uppercase tracking-widest">
+          <p className="text-sm md:text-base text-slate-400 font-semibold uppercase tracking-widest">
             No authorized courses available.
           </p>
         </div>

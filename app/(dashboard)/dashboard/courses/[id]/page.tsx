@@ -11,22 +11,47 @@ export default async function CourseDirectory({
   const supabase = await createClient();
   const { id } = await params;
 
-  const { data: course } = await supabase.from("courses").select("*").eq("id", id).single();
-  const { data: lessons } = await supabase.from("lessons").select("*").eq("course_id", id).order("order_index", { ascending: true });
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: progress } = await supabase.from("user_progress").select("lesson_id").eq("user_id", user?.id);
+  const { data: course } = await supabase
+    .from("courses")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  // Fetch modules and lessons ordered correctly
+  const { data: modules } = await supabase
+    .from("modules")
+    .select(
+      `
+      *,
+      lessons (
+        *
+      )
+    `,
+    )
+    .eq("course_id", id)
+    .order("order_index", { ascending: true });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: progress } = await supabase
+    .from("user_progress")
+    .select("lesson_id")
+    .eq("user_id", user?.id);
 
   const completedIds = new Set(progress?.map((p) => p.lesson_id));
   if (!course) notFound();
 
+  // Flatten all lessons for counting completed
+  const allLessons = modules?.flatMap((m) => m.lessons || []) || [];
+  const totalLessons = allLessons.length;
+
   return (
     <div className="w-full py-6 md:py-10 px-4 sm:px-6 md:px-10 space-y-8 md:space-y-12 select-none">
-      
       {/* 1. Navigation Header */}
       <div className="space-y-4 md:space-y-6">
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="inline-flex items-center gap-2 text-[10px] font-bold text-[#00ADEF] hover:opacity-70 transition-all tracking-wide uppercase"
         >
           <ArrowLeft size={14} strokeWidth={3} /> Return to Dashboard
@@ -42,87 +67,150 @@ export default async function CourseDirectory({
         </header>
       </div>
 
-      {/* 2. Lessons Section */}
+      {/* 2. Modules & Lessons Section */}
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-2">
           <h3 className="text-[10px] md:text-[11px] font-bold uppercase text-slate-400 tracking-wider">
-            Available Modules
+            Course Modules
           </h3>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 sm:bg-transparent px-2 py-1 rounded sm:p-0 w-fit">
-            {completedIds.size} / {lessons?.length || 0} Complete
+          <span className="text-[10px] font-medium text-slate-400 uppercase bg-slate-100 sm:bg-transparent px-2 py-1 rounded sm:p-0 w-fit">
+            {completedIds.size} / {totalLessons || 0} Lessons Complete
           </span>
         </div>
 
-        {/* The Lesson Stack */}
-        <div className="grid gap-3 md:gap-4 max-w-5xl">
-          {lessons?.map((lesson, idx) => {
-            const isCompleted = completedIds.has(lesson.id);
-            const isUnlocked = idx === 0 || completedIds.has(lessons[idx - 1].id);
-            
-            const cardBase = "group flex items-center justify-between p-4 sm:p-5 md:p-7 bg-white border rounded-[20px] md:rounded-[24px] transition-all duration-300";
-
-            if (!isUnlocked) {
-              return (
-                <div key={lesson.id} className={`${cardBase} border-slate-100 bg-slate-50/40 opacity-60 cursor-not-allowed`}>
-                  <div className="flex items-center gap-4 md:gap-6 min-w-0 flex-1">
-                    <div className="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300 font-bold text-base md:text-xl">
-                      {(idx + 1).toString().padStart(2, '0')}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] md:text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-0.5">Section {idx + 1}</p>
-                      <h4 className="text-base md:text-xl font-bold text-slate-300 line-clamp-1">{lesson.title}</h4>
-                    </div>
-                  </div>
-                  <Lock size={18} className="text-slate-200 flex-shrink-0 ml-4" />
-                </div>
-              );
-            }
+        {/* Modules Stack */}
+        <div className="space-y-8 max-w-5xl">
+          {modules?.map((module: any, moduleIdx: number) => {
+            const moduleLessons = (module.lessons || []).sort(
+              (a: any, b: any) => a.order_index - b.order_index,
+            );
 
             return (
-              <Link 
-                key={lesson.id} 
-                href={`/dashboard/courses/${id}/lessons/${lesson.id}`}
-                className={`${cardBase} border-slate-200 hover:border-[#00ADEF] hover:shadow-xl hover:shadow-blue-500/5 active:scale-[0.98] md:active:scale-[0.99]`}
-              >
-                <div className="flex items-center gap-4 md:gap-6 min-w-0 flex-1">
-                  {/* Lesson Number Box */}
-                  <div className={`flex-shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-base md:text-xl transition-all shadow-sm ${
-                    isCompleted 
-                      ? 'bg-emerald-50 text-emerald-500' 
-                      : 'bg-slate-50 text-slate-400 group-hover:bg-cyan-50 group-hover:text-[#00ADEF]'
-                  }`}>
-                    {(idx + 1).toString().padStart(2, '0')}
+              <div key={module.id} className="space-y-4">
+                {/* Module Header */}
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#00ADEF]/10 border border-[#00ADEF]/20 flex items-center justify-center text-[#00ADEF] font-bold">
+                    {module.order_index.toString().padStart(2, "0")}
                   </div>
-
-                  {/* Title and Badge Container */}
-                  <div className="min-w-0 flex-1 pr-2">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-                      <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Section {idx + 1}</p>
-                      {isCompleted && (
-                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] md:text-[9px] font-black uppercase rounded tracking-tighter">
-                          Completed
-                        </span>
-                      )}
-                    </div>
-                    {/* Removed truncate here to allow titles to wrap on mobile */}
-                    <h4 className="text-base md:text-xl font-bold text-slate-900 group-hover:text-[#00ADEF] transition-colors leading-tight">
-                      {lesson.title}
-                    </h4>
+                  <div className="flex-1">
+                    <h3 className="text-lg md:text-xl font-bold text-slate-900">
+                      {module.title}
+                    </h3>
+                    {module.description && (
+                      <p className="text-sm text-slate-500 mt-1">
+                        {module.description}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Right Side Action */}
-                <div className="flex items-center gap-2 md:gap-4 text-slate-200 group-hover:text-[#00ADEF] transition-all flex-shrink-0">
-                  <span className="text-sm font-bold tracking-wide hidden lg:block opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                    {isCompleted ? "Review" : "Start"}
-                  </span>
-                  <PlayCircle 
-                    size={28} 
-                    strokeWidth={1.5} 
-                    className="transition-transform group-hover:scale-110 md:w-8 md:h-8" 
-                  />
+                {/* Lessons in Module */}
+                <div className="grid gap-3 md:gap-4 ml-0 sm:ml-4">
+                  {moduleLessons.map((lesson: any, lessonIdx: number) => {
+                    const isCompleted = completedIds.has(lesson.id);
+
+                    // --- REFINED LOCKING LOGIC ---
+                    let isUnlocked = false;
+
+                    if (moduleIdx === 0 && lessonIdx === 0) {
+                      // First lesson of the entire course is always open
+                      isUnlocked = true;
+                    } else if (lessonIdx > 0) {
+                      // If not first in module, check the previous lesson in the same module
+                      isUnlocked = completedIds.has(
+                        moduleLessons[lessonIdx - 1].id,
+                      );
+                    } else if (moduleIdx > 0 && lessonIdx === 0) {
+                      // If first in module, check the last lesson of the PREVIOUS module
+                      const prevModule = modules[moduleIdx - 1];
+                      const prevModuleLessons = (prevModule.lessons || []).sort(
+                        (a: any, b: any) => a.order_index - b.order_index,
+                      );
+                      const lastLessonOfPrevModule =
+                        prevModuleLessons[prevModuleLessons.length - 1];
+
+                      isUnlocked = completedIds.has(lastLessonOfPrevModule?.id);
+                    }
+
+                    const cardBase =
+                      "group flex items-center justify-between p-4 sm:p-5 md:p-7 bg-white border rounded-[20px] md:rounded-[24px] transition-all duration-300";
+
+                    if (!isUnlocked) {
+                      return (
+                        <div
+                          key={lesson.id}
+                          className={`${cardBase} border-slate-100 bg-slate-50/40 opacity-60 cursor-not-allowed`}
+                        >
+                          <div className="flex items-center gap-4 md:gap-6 min-w-0 flex-1">
+                            <div className="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300 font-bold text-base md:text-xl">
+                              {lesson.order_index.toString().padStart(2, "0")}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[9px] md:text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-0.5">
+                                Lesson {lesson.order_index}
+                              </p>
+                              <h4 className="text-base md:text-xl font-bold text-slate-300 line-clamp-1">
+                                {lesson.title}
+                              </h4>
+                            </div>
+                          </div>
+                          <Lock
+                            size={18}
+                            className="text-slate-200 flex-shrink-0 ml-4"
+                          />
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Link
+                        key={lesson.id}
+                        href={`/dashboard/courses/${id}/lessons/${lesson.id}`}
+                        className={`${cardBase} border-slate-200 hover:border-[#00ADEF] hover:shadow-xl hover:shadow-blue-500/5 active:scale-[0.98] md:active:scale-[0.99]`}
+                      >
+                        <div className="flex items-center gap-4 md:gap-6 min-w-0 flex-1">
+                          <div
+                            className={`flex-shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-base md:text-xl transition-all shadow-sm ${
+                              isCompleted
+                                ? "bg-emerald-50 text-emerald-500"
+                                : "bg-slate-50 text-slate-400 group-hover:bg-cyan-50 group-hover:text-[#00ADEF]"
+                            }`}
+                          >
+                            {lesson.order_index.toString().padStart(2, "0")}
+                          </div>
+
+                          <div className="min-w-0 flex-1 pr-2">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                              <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                Lesson {lesson.order_index}
+                              </p>
+                              {isCompleted && (
+                                <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] md:text-[9px] font-semibold uppercase rounded tracking-tighter">
+                                  Completed
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="text-base md:text-xl font-bold text-slate-900 group-hover:text-[#00ADEF] transition-colors leading-tight">
+                              {lesson.title}
+                            </h4>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 md:gap-4 text-slate-200 group-hover:text-[#00ADEF] transition-all flex-shrink-0">
+                          <span className="text-sm font-bold tracking-wide hidden lg:block opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                            {isCompleted ? "Review" : "Start"}
+                          </span>
+                          <PlayCircle
+                            size={28}
+                            strokeWidth={1.5}
+                            className="transition-transform group-hover:scale-110 md:w-8 md:h-8"
+                          />
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>

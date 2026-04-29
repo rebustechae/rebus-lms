@@ -1,212 +1,155 @@
-'use client'
+"use client";
 
-import { useState, use } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
-import { ChevronLeft, Save, Loader2, BookOpen, Hash, FileText, Video, Upload, X } from 'lucide-react'
-import { uploadVideoFile } from '@/utils/supabase/storage'
+import { useState, use, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import { ChevronLeft, Save, Loader2, Video, Upload, X, CaptionsIcon, FileText, FileDown } from "lucide-react";
+import { uploadFile } from "@/utils/supabase/storage";
 
 export default function NewLessonPage({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState('')
-  const [videoUrl, setVideoUrl] = useState('')
-  const supabase = createClient()
+  const router = useRouter();
+  const resolvedParams = use(params);
+  const courseId = resolvedParams.id;
+  const supabase = createClient();
 
-  const resolvedParams = use(params)
-  const courseId = resolvedParams.id
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [format, setFormat] = useState<"video" | "reading">("video");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [captionsUrl, setCaptionsUrl] = useState("");
+  const [pdfUrl, setPdfUrl] = useState(""); // NEW STATE
+  const [modules, setModules] = useState<any[]>([]);
+  const [selectedModuleId, setSelectedModuleId] = useState("");
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-
-    const formData = new FormData(e.currentTarget)
-
-    const { error } = await supabase.from('lessons').insert({
-      course_id: courseId,
-      title: formData.get('title'),
-      content: formData.get('content'),
-      order_index: parseInt(formData.get('order') as string) || 0,
-      video_url: videoUrl || null,
-    })
-
-    if (error) {
-      alert(`Deployment Error: ${error.message}`)
-      setLoading(false)
-    } else {
-      router.push(`/admin/courses/${courseId}`)
-      router.refresh()
+  useEffect(() => {
+    async function fetchModules() {
+      const { data } = await supabase
+        .from("modules")
+        .select("id, title, order_index")
+        .eq("course_id", courseId)
+        .order("order_index", { ascending: true });
+      if (data) {
+        setModules(data);
+        if (data.length > 0) setSelectedModuleId(data[0].id);
+      }
     }
-  }
+    fetchModules();
+  }, [courseId, supabase]);
 
-  async function handleVideoUpload(file: File) {
-    const MAX_SIZE = 100 * 1024 * 1024; // 100MB
-
-    if (file.size > MAX_SIZE) {
-      setUploadProgress(`File too large. Maximum size is 100MB (your file: ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-      setTimeout(() => setUploadProgress(''), 4000);
-      return;
-    }
-
-    setUploading(true)
-    setUploadProgress('Uploading...')
-
-    const publicUrl = await uploadVideoFile(file, courseId, 'new-lesson')
+  async function handleFileUpload(file: File, type: "video" | "captions" | "pdf") {
+    setUploading(true);
+    // ✅ PDFs and Captions go to course-assets, Videos go to videos
+    const targetBucket = type === "video" ? "videos" : "course-assets";
+    const fileName = `${type}-${Date.now()}`;
+    const publicUrl = await uploadFile(file, courseId, fileName, targetBucket);
 
     if (publicUrl) {
-      setVideoUrl(publicUrl)
-      setUploadProgress('Upload successful!')
-      setTimeout(() => setUploadProgress(''), 2000)
-    } else {
-      setUploadProgress('Upload failed. Please try again.')
-      setTimeout(() => setUploadProgress(''), 3000)
+      if (type === "video") setVideoUrl(publicUrl);
+      if (type === "captions") setCaptionsUrl(publicUrl);
+      if (type === "pdf") setPdfUrl(publicUrl);
     }
+    setUploading(false);
+  }
 
-    setUploading(false)
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+
+    const { error } = await supabase.from("lessons").insert({
+      module_id: selectedModuleId,
+      course_id: courseId,
+      title: formData.get("title"),
+      content: formData.get("content"),
+      format: format,
+      order_index: parseInt(formData.get("order") as string) || 0,
+      video_url: format === "video" ? videoUrl : null,
+      captions_url: format === "video" ? captionsUrl : null,
+      pdf_url: format === "reading" ? pdfUrl : null, // Ensure this column exists in DB
+    });
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+    } else {
+      router.push(`/admin/courses/${courseId}`);
+      router.refresh();
+    }
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20 px-4">
-      {/* NAVIGATION */}
-      <button 
-        onClick={() => router.back()} 
-        className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#00ADEF] transition-colors group"
-      >
-        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
-        Discard and Return
+    <div className="max-w-4xl mx-auto space-y-8 p-8">
+      <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 font-bold">
+        <ChevronLeft size={16} /> Back
       </button>
 
-      {/* HEADER */}
-      <header className="border-b border-slate-200 pb-6">
-        <h2 className="text-4xl font-bold text-slate-900 tracking-tight">New Lesson Entry</h2>
-        <p className="text-slate-500 mt-1 font-medium italic">Constructing core curriculum for course ID: {courseId.split('-')[0]}</p>
-      </header>
-
-      {/* FORM */}
-      <form onSubmit={handleSubmit} className="space-y-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-        
-        {/* METADATA SECTION */}
-        <div className="space-y-4">
-          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <Hash size={14} className="text-[#00ADEF]" /> Lesson Metadata
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-3 group">
-              <input 
-                name="title" 
-                required 
-                placeholder="LESSON TITLE (e.g., Introduction to Safety Protocols)" 
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
-              />
-            </div>
-            <div className="group">
-              <input 
-                name="order" 
-                type="number" 
-                required
-                placeholder="LESSON #" 
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
-              />
-            </div>
-          </div>
+      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="flex gap-4 p-1 bg-slate-100 rounded-2xl">
+          <button type="button" onClick={() => setFormat("video")} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${format === 'video' ? 'bg-white shadow-sm text-[#00ADEF]' : 'text-slate-500'}`}>
+            <Video size={18} /> Video Lesson
+          </button>
+          <button type="button" onClick={() => setFormat("reading")} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${format === 'reading' ? 'bg-white shadow-sm text-amber-600' : 'text-slate-500'}`}>
+            <FileText size={18} /> Reading Material
+          </button>
         </div>
 
-        {/* CONTENT SECTION */}
-        <div className="space-y-4">
-          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <FileText size={14} className="text-[#00ADEF]" /> Instructional Content
-          </label>
-          <div className="relative group">
-            <textarea
-                name="content"
-                required
-                rows={15}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-6 font-mono text-sm leading-relaxed text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all resize-none shadow-inner"
-                placeholder="Enter instructional text, Markdown, or technical documentation..."
-            />
-            <div className="absolute bottom-4 right-4 pointer-events-none text-[10px] font-bold text-slate-300 uppercase tracking-widest bg-white/80 px-2 py-1 rounded border">
-                Draft Mode Active
-            </div>
-          </div>
+        <select value={selectedModuleId} onChange={(e) => setSelectedModuleId(e.target.value)} className="w-full p-4 rounded-xl bg-slate-50 border">
+          {modules.map(m => <option key={m.id} value={m.id}>Module {m.order_index}: {m.title}</option>)}
+        </select>
+
+        <div className="flex gap-4">
+          <input name="title" placeholder="Lesson Title" required className="flex-1 p-4 rounded-xl bg-slate-50 border" />
+          <input name="order" type="number" placeholder="Order" className="w-24 p-4 rounded-xl bg-slate-50 border" />
         </div>
 
-        {/* VIDEO URL SECTION */}
-        <div className="space-y-4">
-          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-            <Video size={14} className="text-[#00ADEF]" /> Upload Video (Optional)
-          </label>
+        <textarea name="content" rows={8} className="w-full p-4 rounded-xl bg-slate-50 border font-mono text-sm" placeholder="Text Content (Markdown)..." />
 
-          {videoUrl ? (
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-green-700 font-medium">✓ Video uploaded</div>
-                <button
-                  type="button"
-                  onClick={() => setVideoUrl('')}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X size={18} />
-                </button>
+        {/* Dynamic Upload Area */}
+        <div className="p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+          {format === "video" ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                {videoUrl ? <p className="text-[10px] text-green-600 font-bold truncate">{videoUrl}</p> : (
+                  <label className="cursor-pointer">
+                    <input type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'video')} />
+                    <Video className="mx-auto mb-2 text-slate-400" />
+                    <span className="text-xs font-bold text-slate-500">Upload Video</span>
+                  </label>
+                )}
               </div>
-              <div className="text-xs text-green-600 break-all font-mono">{videoUrl}</div>
+              <div className="text-center">
+                {captionsUrl ? <p className="text-[10px] text-green-600 font-bold truncate">{captionsUrl}</p> : (
+                  <label className="cursor-pointer">
+                    <input type="file" accept=".vtt" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'captions')} />
+                    <CaptionsIcon className="mx-auto mb-2 text-slate-400" />
+                    <span className="text-xs font-bold text-slate-500">Upload VTT</span>
+                  </label>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-[#00ADEF] hover:bg-blue-50/30 transition-all cursor-pointer relative"
-              onClick={() => document.getElementById('new-video-upload')?.click()}
-            >
-              <input
-                id="new-video-upload"
-                type="file"
-                accept="video/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    handleVideoUpload(file)
-                  }
-                }}
-                className="hidden"
-                disabled={uploading}
-              />
-
-              {uploading ? (
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 size={32} className="text-[#00ADEF] animate-spin" />
-                  <p className="text-sm font-semibold text-slate-700">{uploadProgress}</p>
+            <div className="text-center">
+              {pdfUrl ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileDown className="text-green-500" />
+                  <p className="text-xs font-bold text-green-600">PDF Uploaded Successfully</p>
+                  <X size={14} className="text-red-500 cursor-pointer" onClick={() => setPdfUrl("")} />
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <Upload size={32} className="text-slate-400" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">Click or drag video to upload</p>
-                    <p className="text-xs text-slate-500 mt-1">MP4, WebM, or other video formats (max 100MB)</p>
-                  </div>
-                </div>
+                <label className="cursor-pointer">
+                  <input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'pdf')} />
+                  <FileDown className="mx-auto mb-2 text-slate-400" />
+                  <span className="text-xs font-bold text-slate-500">Upload Reading PDF (Optional)</span>
+                </label>
               )}
             </div>
           )}
-
-          {uploadProgress && uploadProgress !== 'Upload successful!' && (
-            <p className="text-[10px] text-slate-500 italic">{uploadProgress}</p>
-          )}
         </div>
 
-        {/* SUBMIT BUTTON */}
-        <button 
-          type="submit" 
-          disabled={loading}
-          className="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all flex justify-center items-center gap-3 shadow-lg shadow-slate-200 group"
-        >
-          {loading ? (
-            <Loader2 className="animate-spin" size={18} />
-          ) : (
-            <>
-              <Save size={18} /> 
-              Add Lesson to Course
-            </>
-          )}
+        <button disabled={loading || uploading} className="w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center">
+          {loading ? <Loader2 className="animate-spin" /> : "Save Lesson"}
         </button>
       </form>
     </div>
-  )
+  );
 }

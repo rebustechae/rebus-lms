@@ -10,7 +10,50 @@
 import { createClient } from "@/utils/supabase/server";
 
 /**
- * Get all lessons for a course (cached-friendly)
+ * Get all modules for a course with their lessons
+ * Returns hierarchical structure: Course -> Modules -> Lessons
+ */
+export async function getModulesWithLessonsForCourse(courseId: string) {
+  const supabase = await createClient();
+  
+  const { data: modules, error } = await supabase
+    .from("modules")
+    .select(`
+      id,
+      title,
+      description,
+      order_index,
+      lessons (
+        id,
+        title,
+        order_index,
+        module_id,
+        video_url
+      )
+    `)
+    .eq("course_id", courseId)
+    .order("order_index", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching modules with lessons:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
+    // Fallback: return empty array but don't crash
+    return [];
+  }
+
+  // Sort lessons within each module
+  return (modules || []).map(module => ({
+    ...module,
+    lessons: (module.lessons || []).sort((a, b) => a.order_index - b.order_index)
+  }));
+}
+
+/**
+ * Get all lessons for a course (legacy, kept for backward compatibility)
  * Only select needed columns
  */
 export async function getLessonsForCourse(courseId: string) {
@@ -18,12 +61,17 @@ export async function getLessonsForCourse(courseId: string) {
   
   const { data: lessons, error } = await supabase
     .from("lessons")
-    .select("id, title, order_index, course_id, video_url")
+    .select("id, title, order_index, course_id, module_id, video_url")
     .eq("course_id", courseId)
     .order("order_index", { ascending: true });
 
   if (error) {
-    console.error("Error fetching lessons:", error);
+    console.error("Error fetching lessons:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code
+    });
     return [];
   }
 
@@ -170,7 +218,7 @@ export async function isLessonCompleted(
 }
 
 /**
- * Get lesson with prerequisite check (all previous lessons completed)
+ * Get lesson with prerequisite check (all previous lessons in module completed)
  * Optimized for lock logic
  */
 export async function getLessonWithLockStatus(
@@ -183,13 +231,13 @@ export async function getLessonWithLockStatus(
   // Get current lesson
   const { data: lesson, error: lessonError } = await supabase
     .from("lessons")
-    .select("id, title, order_index, content, course_id, video_url")
+    .select("id, title, order_index, content, course_id, module_id, video_url")
     .eq("id", lessonId)
     .single();
 
   if (lessonError) return { lesson: null, isLocked: true };
 
-  // Check if first lesson
+  // Check if first lesson in module
   if (lesson.order_index === 1) {
     return { lesson, isLocked: false };
   }
@@ -198,7 +246,7 @@ export async function getLessonWithLockStatus(
   const { data: prevLesson, error: prevError } = await supabase
     .from("lessons")
     .select("id")
-    .eq("course_id", courseId)
+    .eq("module_id", lesson.module_id)
     .eq("order_index", lesson.order_index - 1)
     .maybeSingle();
 
@@ -253,6 +301,7 @@ export async function getCoursesWithUserStats(
       id,
       title,
       description,
+      modules(count),
       lessons(count)
       `
     )
