@@ -13,7 +13,7 @@ export default async function DashboardPage() {
 
   const userEmail = user?.email?.toLowerCase();
 
-  // FIX: Added .eq filter to course_completions so it only pulls records for the logged-in user
+  // Fetch courses with completions and access filtered by the current user
   const { data: courses } = await supabase
     .from("courses")
     .select(`
@@ -25,11 +25,13 @@ export default async function DashboardPage() {
     .eq('course_completions.user_id', user?.id) 
     .order("created_at", { ascending: false });
 
+  // Fetch the specific lesson progress for the user
   const { data: userProgress } = await supabase
     .from("user_progress")
     .select("lesson_id, lessons!inner(course_id)")
     .eq("user_id", user?.id);
 
+  // Filter courses based on privacy and access
   const visibleCourses = courses?.filter((course) => {
     if (!course.is_private) return true;
     return course.course_access?.some(
@@ -37,12 +39,15 @@ export default async function DashboardPage() {
     );
   }) || [];
 
+  // Process data to calculate progress and button state
   const processedCourses = visibleCourses.map((course) => {
     const totalLessons = course.lessons?.length || 0;
     const completedInThisCourse = userProgress?.filter((p: any) => p.lessons?.course_id === course.id).length || 0;
     const progressPercent = totalLessons > 0 ? Math.round((completedInThisCourse / totalLessons) * 100) : 0;
     
-    // FIX: Check if the completion array actually has a record for THIS user
+    // NEW logic: Check if any progress exists
+    const hasStarted = completedInThisCourse > 0;
+
     const isFulllyCompleted = course.course_completions && course.course_completions.length > 0 
       ? course.course_completions[0].passed 
       : false;
@@ -51,6 +56,7 @@ export default async function DashboardPage() {
       ...course,
       totalLessons,
       progressPercent,
+      hasStarted, // Added to identify if the button should say "Start"
       isFulllyCompleted,
       estimatedTime: course.estimated_time || totalLessons * 10,
     };
@@ -72,7 +78,11 @@ export default async function DashboardPage() {
           <span className={`text-[10px] md:text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
             course.isFulllyCompleted ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-600"
           }`}>
-            {course.isFulllyCompleted ? "Status: Completed" : `Progress: ${course.progressPercent}%`}
+            {course.isFulllyCompleted 
+              ? "Status: Completed" 
+              : course.hasStarted 
+                ? `Progress: ${course.progressPercent}%` 
+                : "Status: Not Started"}
           </span>
           <div className="flex items-center gap-1.5 text-slate-400">
             <Clock size={12} />
@@ -106,7 +116,12 @@ export default async function DashboardPage() {
               : "bg-rebus-blue text-white hover:bg-[#0096d1] shadow-sm shadow-rebus-blue/20 active:scale-95"
           }`}
         >
-          {course.isFulllyCompleted ? "Review Content" : "Continue Course"}
+          {/* UPDATED: Dynamic Button Text */}
+          {course.isFulllyCompleted 
+            ? "Review Content" 
+            : course.hasStarted 
+              ? "Continue Course" 
+              : "Get Started"}
           <ArrowRight size={16} />
         </Link>
       </div>

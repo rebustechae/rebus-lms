@@ -270,7 +270,7 @@ export default function VideoPlayer({
                 {playbackSpeed}x
               </button>
               <div className="absolute bottom-full mb-3 right-0 bg-black/90 backdrop-blur-md rounded-lg border border-white/10 overflow-hidden opacity-0 invisible group-hover/speed:opacity-100 group-hover/speed:visible transition-all duration-200 z-50">
-                {[1, 1.25, 1.5].map((speed) => (
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
                   <button
                     key={speed}
                     onClick={() => setPlaybackSpeed(speed)}
