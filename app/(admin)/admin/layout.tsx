@@ -41,11 +41,7 @@ export default function AdminLayout({
         </div>
 
         {/* NAVIGATION */}
-        <nav className="flex-1 px-4 space-y-1.5">
-          <div className="px-4 mb-4">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Administrative Control</span>
-          </div>
-          
+        <nav className="flex-1 px-4 space-y-1.5">        
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -101,7 +97,7 @@ export default function AdminLayout({
       <main className="flex-1 overflow-y-auto">
         {/* TOP BAR / BREADCRUMB SPACE */}
         <header className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-md sticky top-0 z-20 flex items-center px-12">
-            <p className="text-[10px] font-semibold uppercase text-rebus-purple">System Root / {pathname.replace('/admin', 'Admin').replace('/', ' / ')}</p>
+            <p className="text-[10px] font-semibold uppercase text-rebus-purple">{pathname.replace('/admin', 'Admin').replace('/', ' / ')}</p>
         </header>
 
         <div className="p-12">

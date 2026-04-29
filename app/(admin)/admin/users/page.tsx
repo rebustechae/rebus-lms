@@ -117,11 +117,11 @@ export default async function AdminUsersPage({
       {/* ENTERPRISE HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-200 pb-8">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Personnel Directory</h2>
-          <p className="text-slate-500 text-sm mt-1 font-medium">Review employee engagement, modify access levels, and track completions.</p>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Manage Users</h2>
+          <p className="text-slate-500 text-sm mt-1 font-medium">View and manage user's permissions, and check their course progress.</p>
         </div>
         <div className="flex items-center gap-3">
-            <div className="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-slate-200">
+            <div className="bg-purple-100 text-rebus-purple px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-purple-200">
                 {totalUsers || 0} Total Users
             </div>
         </div>
@@ -187,7 +187,7 @@ export default async function AdminUsersPage({
               query,
               page: String(Math.max(1, page - 1)),
             }).toString()}` : "#"}
-            className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+            className={`px-3 py-2 rounded-lg text-xs uppercase tracking-wider transition-all ${
               !hasPrevPage
                 ? "bg-slate-100 text-slate-300 cursor-not-allowed pointer-events-none"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -195,7 +195,7 @@ export default async function AdminUsersPage({
           >
             ← Previous
           </a>
-          <div className="px-3 py-2 text-xs font-bold text-slate-600">
+          <div className="px-3 py-2 text-xs font-semibold text-slate-600">
             Page {page} of {totalPages}
           </div>
           <a
@@ -203,7 +203,7 @@ export default async function AdminUsersPage({
               query,
               page: String(Math.min(totalPages, page + 1)),
             }).toString()}` : "#"}
-            className={`px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+            className={`px-3 py-2 rounded-lg text-xs uppercase tracking-wider transition-all ${
               !hasNextPage
                 ? "bg-slate-100 text-slate-300 cursor-not-allowed pointer-events-none"
                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -213,13 +213,6 @@ export default async function AdminUsersPage({
           </a>
         </div>
       </div>
-
-      <footer className="flex items-center gap-2 px-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-none">
-          Notice: Role elevation requires administrative override.
-        </p>
-      </footer>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { Plus, Users, Layers, BarChart3, Settings2, ShieldCheck } from "lucide-react";
+import { Plus, Users, Layers, BarChart3, Settings2, ShieldCheck, Edit } from "lucide-react";
 import Link from "next/link";
 import DeleteCourseButton from "./_components/DeleteCourseButton";
 
@@ -57,7 +57,7 @@ export default async function AdminPage() {
         {[
           { label: "Active Courses", val: courses.length, icon: <Layers className="text-[#00ADEF]" />, bg: "bg-blue-50" },
           { label: "Certifications", val: totalCertifications, icon: <ShieldCheck className="text-purple-600" />, bg: "bg-purple-50" },
-          { label: "Active Personnel", val: uniqueStudentCount, icon: <Users className="text-slate-600" />, bg: "bg-slate-100" }
+          { label: "Active Users", val: uniqueStudentCount, icon: <Users className="text-slate-600" />, bg: "bg-slate-100" }
         ].map((kpi, i) => (
           <div key={i} className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -72,7 +72,7 @@ export default async function AdminPage() {
 
       <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
-          <h3 className="font-semibold text-slate-800 text-sm">Course Registry</h3>
+          <h3 className="font-semibold text-slate-800 text-sm">Courses</h3>
         </div>
         <div className="overflow-x-auto">
           {courses.length === 0 ? (
@@ -81,7 +81,7 @@ export default async function AdminPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white text-slate-400 text-[11px] font-bold uppercase border-b border-slate-100">
-                  <th className="px-6 py-4">Course Info</th>
+                  <th className="px-6 py-4">Course Title</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -100,7 +100,7 @@ export default async function AdminPage() {
                        </span>
                     </td>
                     <td className="px-6 py-5 text-right flex justify-end gap-2">
-                       <Link href={`/admin/courses/${course.id}`} className="p-2 hover:bg-slate-100 rounded-lg"><Settings2 size={18} /></Link>
+                       <Link href={`/admin/courses/${course.id}`} className="p-2 hover:bg-slate-100 rounded-lg"><Edit size={18} /></Link>
                        <DeleteCourseButton courseId={course.id} courseTitle={course.title} />
                     </td>
                   </tr>

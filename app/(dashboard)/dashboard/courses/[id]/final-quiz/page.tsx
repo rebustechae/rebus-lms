@@ -172,7 +172,7 @@ export default function FinalCourseQuiz({
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
         <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-xl shadow-slate-200/50 border border-slate-100 text-center space-y-6">
-          <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-20 h-20 bg-purple-50 text-rebus-purple rounded-3xl flex items-center justify-center mx-auto mb-4">
             <Lock size={40} />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Assessment Locked</h2>
@@ -250,7 +250,7 @@ export default function FinalCourseQuiz({
         <div className="space-y-12 md:space-y-16">
           {questions.map((q, idx) => (
             <div key={q.id} className="group space-y-5 md:space-y-6">
-              <div className="flex items-start gap-3 md:gap-4">
+              <div className="flex items-start gap-3 md:gap-4 select-none">
                 <span className="flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] md:text-xs font-semibold text-slate-400 group-focus-within:bg-[#00ADEF] group-focus-within:text-white transition-colors">
                   {(idx + 1).toString().padStart(2, '0')}
                 </span>

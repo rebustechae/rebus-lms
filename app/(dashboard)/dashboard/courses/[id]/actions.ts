@@ -11,9 +11,6 @@ export async function markLessonComplete(courseId: string, lessonId: string) {
     throw new Error("Not authenticated");
   }
 
-  // Avoid `upsert(..., { onConflict })` here: some deployments/tables/views
-  // can reject ON CONFLICT (we've seen this with `user_progress`).
-  // Instead, do an idempotent "check then insert".
   const { data: existing, error: existingError } = await supabase
     .from("user_progress")
     .select("user_id, lesson_id")
@@ -45,7 +42,6 @@ export async function markLessonComplete(courseId: string, lessonId: string) {
     throw new Error(error.message);
   }
 
-  // Purge cache to update sidebar
   revalidatePath(`/dashboard/courses/${courseId}`);
   revalidatePath(`/dashboard/courses/${courseId}/lessons/${lessonId}`);
   
