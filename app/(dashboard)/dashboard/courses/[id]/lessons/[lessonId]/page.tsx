@@ -4,9 +4,14 @@ import ReactMarkdown from "react-markdown";
 import { useState, useEffect, use, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { ChevronRight, CheckCircle2, ChevronLeft } from "lucide-react";
+import {
+  ChevronRight,
+  CheckCircle2,
+  ChevronLeft,
+  BookOpen,
+  Loader2,
+} from "lucide-react";
 
-import LessonQuiz from "@/app/(dashboard)/dashboard/_components/LessonQuiz";
 import VideoPlayer from "@/app/(dashboard)/dashboard/_components/VideoPlayer";
 import { markLessonComplete } from "../../actions";
 
@@ -22,178 +27,245 @@ export default function LessonContentPage({
   const [lesson, setLesson] = useState<any>(null);
   const [nextLessonId, setNextLessonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isLocked, setIsLocked] = useState(false);
 
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [isFirstViewing, setIsFirstViewing] = useState(false);
-  const [quiz, setQuiz] = useState<any[]>([]);
-  const [quizPassed, setQuizPassed] = useState(false);
   const [completionSaved, setCompletionSaved] = useState(false);
+
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
 
   const supabase = createClient();
 
   useEffect(() => {
     async function getLessonData() {
-      setVideoCompleted(false);
-      setQuizPassed(false);
-      setCompletionSaved(false);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return router.push("/");
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: lessonData, error: lError } = await supabase
+      // 1. Fetch current lesson and module info
+      const { data: lessonData } = await supabase
         .from("lessons")
-        .select("id, title, content, order_index, video_url")
+        .select("*, modules!inner(id, order_index)")
         .eq("id", params.lessonId)
-        .maybeSingle();
+        .single();
 
-      if (!lessonData || lError) return;
+      if (!lessonData) return router.push(`/dashboard/courses/${params.id}`);
 
-      const { data: quizData } = await supabase
-        .from("quizzes")
-        .select("id, question, options, correct_answer")
-        .eq("lesson_id", params.lessonId);
-
-      setQuiz(quizData || []);
-
-      const { data: progressData } = await supabase
-        .from("user_progress")
-        .select("lesson_id")
-        .eq("lesson_id", params.lessonId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      const isFirstView = !progressData;
-      setIsFirstViewing(isFirstView);
-
-      if (progressData) {
-        setVideoCompleted(true);
-        setQuizPassed(true);
-      }
-
-      const { data: allLessons } = await supabase
+      // 2. NEW: Linear Progression Check (The "Gatekeeper")
+      // Find all lessons in this course that should have been finished BEFORE this one
+      const { data: previousLessons } = await supabase
         .from("lessons")
-        .select("id, order_index")
+        .select("id")
         .eq("course_id", params.id)
-        .order("order_index", { ascending: true });
+        .or(
+          `module_id.lt.${lessonData.module_id},and(module_id.eq.${lessonData.module_id},order_index.lt.${lessonData.order_index})`,
+        );
 
-      if (allLessons) {
-        const currentIndex = allLessons.findIndex((l) => l.id === params.lessonId);
-        if (currentIndex !== -1 && currentIndex < allLessons.length - 1) {
-          setNextLessonId(allLessons[currentIndex + 1].id);
+      if (previousLessons && previousLessons.length > 0) {
+        const previousIds = previousLessons.map((l) => l.id);
+
+        const { data: completedProgress } = await supabase
+          .from("user_progress")
+          .select("lesson_id")
+          .eq("user_id", user.id)
+          .in("lesson_id", previousIds);
+
+        // If count of completed doesn't match count of required previous lessons, redirect
+        if ((completedProgress?.length || 0) < previousIds.length) {
+          return router.push(
+            `/dashboard/courses/${params.id}?error=sequential`,
+          );
         }
       }
 
       setLesson(lessonData);
+
+      // 3. Handle PDF Fetching
+      if (lessonData.format === "reading" && lessonData.pdf_url) {
+        try {
+          const response = await fetch(lessonData.pdf_url);
+          const blob = await response.blob();
+          const localUrl = URL.createObjectURL(blob);
+          setPdfBlobUrl(localUrl);
+        } catch (e) {
+          console.error("PDF preview error:", e);
+        }
+      }
+
+      // 4. Check if current lesson is already done
+      const { data: progress } = await supabase
+        .from("user_progress")
+        .select("id")
+        .eq("lesson_id", params.lessonId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      setIsFirstViewing(!progress);
+      if (progress) setVideoCompleted(true);
+
+      // 5. Navigation Logic (Next Lesson)
+      const { data: sameModuleLessons } = await supabase
+        .from("lessons")
+        .select("id")
+        .eq("module_id", lessonData.module_id)
+        .order("order_index", { ascending: true });
+
+      const currentIndex =
+        sameModuleLessons?.findIndex((l) => l.id === params.lessonId) ?? -1;
+
+      if (currentIndex !== -1 && currentIndex < sameModuleLessons!.length - 1) {
+        setNextLessonId(sameModuleLessons![currentIndex + 1].id);
+      } else {
+        const { data: nextModule } = await supabase
+          .from("modules")
+          .select("id")
+          .eq("course_id", params.id)
+          .gt("order_index", lessonData.modules.order_index)
+          .order("order_index", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (nextModule) {
+          const { data: firstLesson } = await supabase
+            .from("lessons")
+            .select("id")
+            .eq("module_id", nextModule.id)
+            .order("order_index", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          setNextLessonId(firstLesson?.id || null);
+        } else {
+          setNextLessonId(null);
+        }
+      }
       setLoading(false);
     }
     getLessonData();
-  }, [params.lessonId, params.id, supabase]);
+  }, [params.lessonId, params.id, router, supabase]);
+
+  // Handle PDF cleanup on unmount or change
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+    };
+  }, [pdfBlobUrl]);
 
   useEffect(() => {
-    if (loading || completionSaved || !videoCompleted || (quiz.length > 0 && !quizPassed) || !isFirstViewing) return;
+    if (lesson?.format === "reading") setVideoCompleted(true);
+  }, [lesson]);
 
-    (async () => {
+  useEffect(() => {
+    if (loading || completionSaved || !videoCompleted || !isFirstViewing)
+      return;
+    const handleSaveProgress = async () => {
       try {
         setCompletionSaved(true);
         await markLessonComplete(params.id, params.lessonId);
         router.refresh();
       } catch (error) {
         setCompletionSaved(false);
-        console.error(error);
       }
-    })();
-  }, [videoCompleted, completionSaved, loading, params.id, params.lessonId, quiz.length, quizPassed, router, isFirstViewing]);
+    };
+    handleSaveProgress();
+  }, [
+    videoCompleted,
+    loading,
+    completionSaved,
+    isFirstViewing,
+    params.id,
+    params.lessonId,
+    router,
+  ]);
 
-  useEffect(() => {
-    if (videoCompleted && footerRef.current) {
-      setTimeout(() => {
-        footerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 300);
-    }
-  }, [videoCompleted]);
-
-  const handleQuizPass = async () => {
-    setQuizPassed(true);
-    try {
-      setCompletionSaved(true);
-      await markLessonComplete(params.id, params.lessonId);
-      router.refresh();
-    } catch (error) {
-      setCompletionSaved(false);
-      console.error(error);
-    }
-  };
-
-  if (loading) return <div className="p-20 text-center animate-pulse font-bold text-slate-400">Loading lesson...</div>;
-  if (isLocked) return <div className="p-20 text-center font-bold">Locked Section...</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-slate-400 gap-4">
+        <Loader2 className="animate-spin text-[#00ADEF]" size={32} />
+        <p className="font-bold text-sm uppercase tracking-widest">
+          Loading Lesson...
+        </p>
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-white">
-      {/* 1. Logo - Adjusted for mobile visibility (hidden on very small screens or moved) */}
-      <div className="fixed top-4 right-4 md:top-12 md:right-12 z-50 pointer-events-none">
-        <img
-          src="/logo.png"
-          alt="Rebus LMS"
-          className="h-8 md:h-16 w-auto object-contain opacity-50 md:opacity-100"
-        />
-      </div>
-
-      <main className="max-w-4xl mx-auto pt-16 md:pt-32 pb-24 px-4 sm:px-6 md:px-8">
-        {/* 2. Back Button */}
+      <main className="max-w-4xl mx-auto pt-16 md:pt-32 pb-24 px-4">
         <button
           onClick={() => router.push(`/dashboard/courses/${params.id}`)}
-          className="flex items-center gap-2 text-xs md:text-sm font-semibold text-slate-400 hover:text-[#00ADEF] transition-colors mb-6 md:mb-10 group uppercase tracking-widest"
+          className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-[#00ADEF] mb-10 uppercase tracking-widest group"
         >
-          <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          <ChevronLeft
+            size={16}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
           Back to Directory
         </button>
 
         <header className="mb-10 md:mb-16">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
-            <span className="bg-slate-100 text-slate-500 text-[9px] md:text-[11px] font-semibold px-2.5 py-1 rounded-md uppercase tracking-widest">
-              Module {lesson.order_index}
-            </span>
-          </div>
+          <span
+            className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest ${
+              lesson.format === "reading"
+                ? "bg-amber-100 text-amber-600"
+                : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            {lesson.format === "reading"
+              ? "Reading Material"
+              : `Module Sequence ${lesson.order_index}`}
+          </span>
 
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-semibold text-slate-900 tracking-tight leading-[1.1] mb-8 md:mb-12">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-semibold text-slate-900 mt-8 mb-12">
             {lesson.title}
           </h1>
 
-          {/* Video Player Container - Ensure responsive aspect ratio via CSS if component doesn't */}
-          {lesson.video_url && (
-            <div className="rounded-2xl overflow-hidden shadow-2xl shadow-blue-900/10">
+          {lesson.format === "video" && lesson.video_url ? (
+            <div className="rounded-2xl overflow-hidden shadow-2xl">
               <VideoPlayer
                 videoUrl={lesson.video_url}
+                captionsUrl={lesson.captions_url}
                 isFirstViewing={isFirstViewing}
-                onVideoProgress={(progress) => {}}
                 onVideoComplete={() => setVideoCompleted(true)}
               />
             </div>
-          )}
+          ) : lesson.format === "reading" && lesson.pdf_url ? (
+            <div className="w-full h-[600px] md:h-[900px] bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-xl relative">
+              {!pdfBlobUrl ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-white">
+                  <Loader2 className="animate-spin mb-2" />
+                  <span className="text-xs font-bold uppercase tracking-widest">
+                    Generating Preview...
+                  </span>
+                </div>
+              ) : (
+                <iframe
+                  src={`${pdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                  className="w-full h-full"
+                  style={{ border: "none" }}
+                />
+              )}
+            </div>
+          ) : lesson.format === "reading" ? (
+            <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-12 flex flex-col items-center text-slate-400">
+              <BookOpen size={48} className="mb-4 text-amber-500/50" />
+              <p className="font-bold uppercase tracking-widest text-xs text-slate-500">
+                Text Lesson
+              </p>
+            </div>
+          ) : null}
         </header>
 
-        {/* 3. Content Section - Typography scaling for mobile */}
-        <article className="prose prose-slate max-w-none text-base md:text-lg select-none leading-relaxed text-slate-700 
-          [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:my-4 
-          [&>ol]:list-decimal [&>ol]:ml-6 [&>ol]:my-4 
-          [&>li]:pl-2 [&>p]:mb-6 
-          [&>h2]:text-xl [&>h2]:font-bold [&>h2]:text-slate-900 [&>h2]:mt-10 [&>h2]:mb-4
-          [&>p>a]:text-[#00ADEF] [&>p>a]:font-bold [&>p>a]:underline">
+        <article className="prose prose-slate max-w-none text-base md:text-lg select-none leading-relaxed text-slate-700 mt-12 mb-20">
           <ReactMarkdown key={params.lessonId}>{lesson.content}</ReactMarkdown>
         </article>
 
-        {/* QUIZ SECTION */}
-        {quiz.length > 0 && (
-          <div className="mt-16 md:mt-24 pt-12 border-t border-slate-100">
-            <LessonQuiz questions={quiz} onPass={handleQuizPass} />
-          </div>
-        )}
-
-        <footer ref={footerRef} className="mt-16 md:mt-24 pt-10 border-t border-slate-100">
+        <footer
+          ref={footerRef}
+          className="mt-16 pt-10 border-t border-slate-100 pb-20"
+        >
           <div className="flex flex-col items-center gap-8">
             <button
-              disabled={!videoCompleted || (quiz.length > 0 && !quizPassed)}
+              disabled={!videoCompleted}
               onClick={() =>
                 router.push(
                   nextLessonId
@@ -201,27 +273,23 @@ export default function LessonContentPage({
                     : `/dashboard/courses/${params.id}/final-quiz`,
                 )
               }
-              className={`w-full py-4 md:py-6 rounded-2xl font-semibold transition-all flex items-center justify-center gap-3 text-white text-xs md:text-sm
+              className={`w-full py-6 rounded-2xl font-semibold transition-all flex items-center justify-center gap-3 text-white
                 ${
-                  videoCompleted && (quiz.length === 0 || quizPassed)
+                  videoCompleted
                     ? nextLessonId
-                      ? "bg-[#00ADEF] hover:bg-[#0098D4] active:scale-95 shadow-xl shadow-blue-200"
-                      : "bg-[#662D91] hover:bg-[#581F7D] active:scale-95 shadow-xl shadow-purple-200"
+                      ? "bg-[#00ADEF] hover:bg-[#0098D4] shadow-xl shadow-blue-200"
+                      : "bg-[#662D91] shadow-xl shadow-purple-200"
                     : "bg-slate-100 text-slate-300 cursor-not-allowed"
                 }`}
             >
-              {videoCompleted ? <CheckCircle2 size={18} /> : null}
-              {videoCompleted
-                ? nextLessonId
+              {videoCompleted && <CheckCircle2 size={18} />}
+              {!videoCompleted
+                ? "Finish Video to Unlock"
+                : nextLessonId
                   ? "Next Module"
-                  : "Final Assessment"
-                : "Finish Video to Unlock"}
+                  : "Final Assessment"}
               <ChevronRight size={18} />
             </button>
-
-            <p className="text-[10px] text-slate-300 font-bold uppercase">
-              &copy; 2026 Rebus Holdings
-            </p>
           </div>
         </footer>
       </main>

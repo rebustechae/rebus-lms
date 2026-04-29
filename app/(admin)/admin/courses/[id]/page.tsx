@@ -26,9 +26,14 @@ export default async function CourseDetailAdmin({
     .eq("id", id)
     .single();
 
-  const { data: lessons } = await supabase
-    .from("lessons")
-    .select("*")
+  const { data: modules } = await supabase
+    .from("modules")
+    .select(`
+      *,
+      lessons (
+        *
+      )
+    `)
     .eq("course_id", id)
     .order("order_index", { ascending: true });
 
@@ -68,12 +73,20 @@ export default async function CourseDetailAdmin({
             </p>
           </div>
           
-          <Link
-            href={`/admin/courses/${id}/lessons/new`}
-            className="bg-[#00ADEF] hover:bg-[#0096d1] text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm shadow-cyan-500/20 whitespace-nowrap"
-          >
-            <Plus size={18} /> Add New Lesson
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <Link
+              href={`/admin/courses/${id}/modules/new`}
+              className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm shadow-slate-500/20 whitespace-nowrap justify-center md:justify-start"
+            >
+              <Plus size={18} /> Add Module
+            </Link>
+            <Link
+              href={`/admin/courses/${id}/lessons/new`}
+              className="bg-[#00ADEF] hover:bg-[#0096d1] text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm shadow-cyan-500/20 whitespace-nowrap justify-center md:justify-start"
+            >
+              <Plus size={18} /> Add Lesson
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -107,16 +120,16 @@ export default async function CourseDetailAdmin({
         </div>
       </div>
 
-      {/* --- LESSONS LIST --- */}
+      {/* --- MODULES & LESSONS LIST --- */}
       <section className="space-y-6 pt-4">
         <div className="flex items-center justify-between border-l-4 border-[#00ADEF] pl-4">
             <div>
                 <h3 className="font-bold text-slate-900 text-lg tracking-tight">Syllabus Structure</h3>
-                <p className="text-slate-500 text-xs font-medium">Manage module order and content delivery.</p>
+                <p className="text-slate-500 text-xs font-medium">Manage modules and lessons order and content delivery.</p>
             </div>
         </div>
 
-        {lessons?.length === 0 ? (
+        {!modules || modules.length === 0 ? (
           <div className="border border-slate-200 border-dashed rounded-2xl p-20 text-center bg-slate-50/50">
             <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BookOpen className="text-slate-400" size={24} />
@@ -124,36 +137,66 @@ export default async function CourseDetailAdmin({
             <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Protocol is currently empty</p>
           </div>
         ) : (
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="divide-y divide-slate-100">
-              {lessons?.map((lesson) => (
-                <div
-                  key={lesson.id}
-                  className="p-5 flex justify-between items-center hover:bg-slate-50/50 transition-colors group"
-                >
-                  <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 text-slate-400 group-hover:bg-[#00ADEF]/5 group-hover:border-[#00ADEF]/20 group-hover:text-[#00ADEF] transition-all">
-                        <span className="text-[10px] font-black leading-none">MOD</span>
+          <div className="space-y-6">
+            {modules.map((module: any) => (
+              <div key={module.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                {/* Module Header */}
+                <div className="p-5 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-[#00ADEF]/10 border border-[#00ADEF]/20 text-[#00ADEF]">
+                        <span className="text-[9px] font-black leading-none">MOD</span>
                         <span className="text-sm font-bold leading-none mt-1">
-                            {lesson.order_index.toString().padStart(2, '0')}
+                            {module.order_index.toString().padStart(2, '0')}
                         </span>
                     </div>
                     <div>
-                        <span className="block font-bold text-slate-900 text-lg tracking-tight group-hover:text-[#00ADEF] transition-colors">
-                            {lesson.title}
+                        <span className="block font-bold text-slate-900 text-lg tracking-tight">
+                            {module.title}
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Resource ID: {lesson.id.split('-')[0]}</span>
+                        {module.description && (
+                          <span className="text-sm text-slate-500">{module.description}</span>
+                        )}
                     </div>
                   </div>
-
-                  <LessonActions
-                    lessonId={lesson.id}
-                    courseId={id}
-                    lessonTitle={lesson.title}
-                  />
                 </div>
-              ))}
-            </div>
+
+                {/* Lessons in Module */}
+                {module.lessons && module.lessons.length > 0 ? (
+                  <div className="divide-y divide-slate-100">
+                    {(module.lessons as any[]).sort((a, b) => a.order_index - b.order_index).map((lesson) => (
+                      <div
+                        key={lesson.id}
+                        className="p-5 flex justify-between items-center hover:bg-slate-50/50 transition-colors group ml-6 border-l-2 border-slate-100 hover:border-[#00ADEF]/30"
+                      >
+                        <div className="flex items-center gap-6">
+                          <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 text-slate-400 group-hover:bg-slate-100 transition-all">
+                              <span className="text-xs font-bold leading-none">
+                                  {lesson.order_index.toString().padStart(2, '0')}
+                              </span>
+                          </div>
+                          <div>
+                              <span className="block font-semibold text-slate-900 text-base tracking-tight group-hover:text-[#00ADEF] transition-colors">
+                                  {lesson.title}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {lesson.id.split('-')[0]}</span>
+                          </div>
+                        </div>
+
+                        <LessonActions
+                          lessonId={lesson.id}
+                          courseId={id}
+                          lessonTitle={lesson.title}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-400">
+                    <p className="text-sm">No lessons in this module</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </section>

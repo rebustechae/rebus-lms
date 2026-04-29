@@ -1,231 +1,258 @@
-'use client'
+"use client";
 
-import { useState, useEffect, use } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
-import { ChevronLeft, Save, Loader2, FileText, Hash, Layout, Video, Upload, X } from 'lucide-react'
-import { uploadVideoFile } from '@/utils/supabase/storage'
-import QuizManager from "@/app/(admin)/admin/_components/QuizManager"
+import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+import {
+  ChevronLeft,
+  Save,
+  Loader2,
+  Video,
+  Upload,
+  X,
+  CaptionsIcon,
+  FileText,
+} from "lucide-react";
+import { uploadFile } from "@/utils/supabase/storage";
 
-export default function EditLessonPage({ params: paramsPromise }: { params: Promise<{ id: string, lessonId: string }> }) {
-  const params = use(paramsPromise)
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [lesson, setLesson] = useState({ title: '', content: '', order_index: 0, video_url: '' })
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadProgress, setUploadProgress] = useState('')
-  const supabase = createClient()
+export default function EditLessonPage({
+  params: paramsPromise,
+}: {
+  params: Promise<{ id: string; lessonId: string }>;
+}) {
+  const params = use(paramsPromise);
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const [originalIndex, setOriginalIndex] = useState<number>(0);
+  const [lesson, setLesson] = useState({
+    title: "",
+    content: "",
+    format: "video", // NEW
+    order_index: 0,
+    video_url: "",
+    captions_url: "",
+  });
+
+  const supabase = createClient();
 
   useEffect(() => {
     async function fetchLesson() {
       const { data } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('id', params.lessonId)
-        .single()
-      
-      if (data) setLesson(data)
-      setLoading(false)
+        .from("lessons")
+        .select("*")
+        .eq("id", params.lessonId)
+        .single();
+      if (data) {
+        setLesson(data);
+        setOriginalIndex(data.order_index);
+      }
+      setLoading(false);
     }
-    fetchLesson()
-  }, [params.lessonId])
+    fetchLesson();
+  }, [params.lessonId, supabase]);
 
   async function handleUpdate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSaving(true)
+    e.preventDefault();
+    setSaving(true);
+    let finalIndex = lesson.order_index;
 
-    const { error } = await supabase
-      .from('lessons')
-      .update({
-        title: lesson.title,
-        content: lesson.content,
-        order_index: lesson.order_index,
-        video_url: lesson.video_url,
-      })
-      .eq('id', params.lessonId)
+    try {
+      const { error } = await supabase
+        .from("lessons")
+        .update({
+          title: lesson.title,
+          content: lesson.content,
+          format: lesson.format,
+          order_index: finalIndex,
+          video_url: lesson.format === "video" ? lesson.video_url : null,
+          captions_url: lesson.format === "video" ? lesson.captions_url : null,
+        })
+        .eq("id", params.lessonId);
 
-    if (error) {
-      alert(`System Error: ${error.message}`)
-      setSaving(false)
-    } else {
-      router.push(`/admin/courses/${params.id}`)
-      router.refresh()
+      if (error) throw error;
+      router.push(`/admin/courses/${params.id}`);
+      router.refresh();
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
+      setSaving(false);
     }
   }
 
-  async function handleVideoUpload(file: File) {
-    const MAX_SIZE = 100 * 1024 * 1024; // 100MB
-
-    if (file.size > MAX_SIZE) {
-      setUploadProgress(`File too large. Maximum size is 100MB (your file: ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-      setTimeout(() => setUploadProgress(''), 4000);
-      return;
-    }
-
-    setUploading(true)
-    setUploadProgress('Uploading...')
-
-    const publicUrl = await uploadVideoFile(file, params.id, params.lessonId)
+  async function handleFileUpload(file: File, type: "video" | "captions") {
+    setUploading(true);
+    const targetBucket = type === "video" ? "videos" : "course-assets";
+    const publicUrl = await uploadFile(
+      file,
+      params.id,
+      `${params.lessonId}-${type}`,
+      targetBucket,
+    );
 
     if (publicUrl) {
-      setLesson({ ...lesson, video_url: publicUrl })
-      setUploadProgress('Upload successful!')
-      setSelectedFile(null)
-      setTimeout(() => setUploadProgress(''), 2000)
-    } else {
-      setUploadProgress('Upload failed. Please try again.')
-      setTimeout(() => setUploadProgress(''), 3000)
+      setLesson((prev) => ({
+        ...prev,
+        [type === "video" ? "video_url" : "captions_url"]: publicUrl,
+      }));
     }
-
-    setUploading(false)
+    setUploading(false);
   }
 
-  if (loading) return (
-    <div className="max-w-4xl mx-auto p-20 flex flex-col items-center gap-4">
-      <Loader2 className="animate-spin text-[#00ADEF]" size={32} />
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Retrieving Secure Records...</p>
-    </div>
-  )
+  if (loading)
+    return (
+      <div className="p-20 text-center animate-pulse font-black text-slate-400">
+        LOADING...
+      </div>
+    );
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-24 px-4">
-      {/* NAVIGATION */}
-      <button 
-        onClick={() => router.back()} 
-        className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#00ADEF] transition-colors group"
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#00ADEF] group"
       >
-        <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> 
+        <ChevronLeft
+          size={16}
+          className="group-hover:-translate-x-1 transition-transform"
+        />
         Cancel Changes
       </button>
 
-      {/* HEADER */}
-      <header className="border-b border-slate-200 pb-6">
-        <div className="flex items-center gap-3 mb-2">
-            <div className="bg-slate-900 p-2 rounded-lg text-white">
-                <FileText size={20} />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Content Editor</span>
-        </div>
-        <h2 className="text-4xl font-bold text-slate-900 tracking-tight">Edit Module Entry</h2>
-        <p className="text-slate-500 mt-1 font-medium italic">Modify lesson parameters and instructional content.</p>
-      </header>
-
-      {/* MAIN EDITOR FORM */}
-      <form onSubmit={handleUpdate} className="space-y-8 bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
-        
-        {/* TOP METADATA ROW */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="md:col-span-3 space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-1">
-                    <Layout size={14} className="text-[#00ADEF]" /> Lesson Title
-                </label>
-                <input 
-                    value={lesson.title}
-                    onChange={(e) => setLesson({...lesson, title: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all"
-                    required
-                    placeholder="ENTER TITLE"
-                />
-            </div>
-            <div className="space-y-3">
-                <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-1">
-                    <Hash size={14} className="text-[#00ADEF]" /> Sequence
-                </label>
-                <input 
-                    type="number"
-                    value={lesson.order_index}
-                    onChange={(e) => setLesson({...lesson, order_index: parseInt(e.target.value)})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all"
-                    required
-                />
-            </div>
+      <form
+        onSubmit={handleUpdate}
+        className="space-y-8 bg-white border border-slate-200 rounded-3xl p-8"
+      >
+        <div className="flex gap-4 p-1 bg-slate-100 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => setLesson({ ...lesson, format: "video" })}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${lesson.format === "video" ? "bg-white shadow-sm text-[#00ADEF]" : "text-slate-500"}`}
+          >
+            <Video size={18} /> Video
+          </button>
+          <button
+            type="button"
+            onClick={() => setLesson({ ...lesson, format: "reading" })}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${lesson.format === "reading" ? "bg-white shadow-sm text-amber-600" : "text-slate-500"}`}
+          >
+            <FileText size={18} /> Reading
+          </button>
         </div>
 
-        {/* CONTENT BOX */}
-        <div className="space-y-3">
-          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-1">
-            <FileText size={14} className="text-[#00ADEF]" /> Instructional Content (Markdown)
-          </label>
-          <textarea
-            value={lesson.content}
-            onChange={(e) => setLesson({...lesson, content: e.target.value})}
-            rows={15}
-            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-6 font-mono text-sm leading-relaxed text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all resize-none shadow-inner"
-            required
+        <div className="grid grid-cols-4 gap-6">
+          <input
+            className="col-span-3 p-4 bg-slate-50 border rounded-2xl font-bold"
+            value={lesson.title}
+            onChange={(e) => setLesson({ ...lesson, title: e.target.value })}
+          />
+          <input
+            type="number"
+            className="p-4 bg-slate-50 border rounded-2xl font-bold"
+            value={lesson.order_index}
+            onChange={(e) =>
+              setLesson({ ...lesson, order_index: parseInt(e.target.value) })
+            }
           />
         </div>
 
-        {/* VIDEO UPLOAD */}
-        <div className="space-y-3">
-          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 px-1">
-            <Video size={14} className="text-[#00ADEF]" /> Upload Video File
-          </label>
+        <textarea
+          value={lesson.content}
+          onChange={(e) => setLesson({ ...lesson, content: e.target.value })}
+          rows={12}
+          className="w-full bg-slate-50 border rounded-2xl p-6 font-mono text-sm"
+        />
 
-          {lesson.video_url ? (
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-green-700 font-medium">✓ Video uploaded</div>
-                <button
-                  type="button"
-                  onClick={() => setLesson({ ...lesson, video_url: '' })}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="text-xs text-green-600 break-all font-mono">{lesson.video_url}</div>
-            </div>
-          ) : (
-            <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center hover:border-[#00ADEF] hover:bg-blue-50/30 transition-all cursor-pointer relative"
-              onClick={() => document.getElementById('video-upload')?.click()}
-            >
-              <input
-                id="video-upload"
-                type="file"
-                accept="video/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    setSelectedFile(file)
-                    handleVideoUpload(file)
-                  }
-                }}
-                className="hidden"
-                disabled={uploading}
-              />
-
-              {uploading ? (
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 size={32} className="text-[#00ADEF] animate-spin" />
-                  <p className="text-sm font-semibold text-slate-700">{uploadProgress}</p>
+        {lesson.format === "video" && (
+          <div className="grid grid-cols-2 gap-6 p-6 bg-slate-50 rounded-3xl">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-400">
+                Video
+              </label>
+              {lesson.video_url ? (
+                <div className="flex items-center gap-2 bg-white p-3 rounded-xl border">
+                  <span className="text-[10px] truncate flex-1">
+                    {lesson.video_url}
+                  </span>
+                  <X
+                    size={14}
+                    className="text-red-500 cursor-pointer"
+                    onClick={() => setLesson({ ...lesson, video_url: "" })}
+                  />
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <Upload size={32} className="text-slate-400" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-700">Click or drag video to upload</p>
-                    <p className="text-xs text-slate-500 mt-1">MP4, WebM, or other video formats (max 100MB)</p>
-                  </div>
+                <div
+                  onClick={() => document.getElementById("v-up")?.click()}
+                  className="bg-white border rounded-xl p-4 text-center cursor-pointer"
+                >
+                  <input
+                    id="v-up"
+                    type="file"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] &&
+                      handleFileUpload(e.target.files[0], "video")
+                    }
+                  />
+                  <Upload size={16} className="mx-auto mb-1 text-slate-400" />
+                  <span className="text-[10px] font-bold">Upload</span>
                 </div>
               )}
             </div>
-          )}
 
-          {uploadProgress && uploadProgress !== 'Upload successful!' && (
-            <p className="text-[10px] text-slate-500 italic">{uploadProgress}</p>
-          )}
-        </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400">
+                <CaptionsIcon size={12} /> Captions (VTT)
+              </label>
 
-        <button 
+              {lesson.captions_url ? (
+                <div className="flex items-center gap-2 bg-white p-3 rounded-xl border border-slate-200">
+                  <span className="text-[10px] font-mono truncate flex-1">
+                    {lesson.captions_url}
+                  </span>
+
+                  <X
+                    size={14}
+                    className="text-red-500 cursor-pointer"
+                    onClick={() => setLesson({ ...lesson, captions_url: "" })}
+                  />
+                </div>
+              ) : (
+                <div
+                  onClick={() => document.getElementById("c-up")?.click()}
+                  className="bg-white border border-slate-200 rounded-xl p-4 text-center hover:border-[#00ADEF] cursor-pointer"
+                >
+                  <input
+                    id="c-up"
+                    type="file"
+                    accept=".vtt"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] &&
+                      handleFileUpload(e.target.files[0], "captions")
+                    }
+                  />
+
+                  <Upload size={16} className="mx-auto mb-1 text-slate-400" />
+
+                  <span className="text-[10px] font-bold text-slate-500">
+                    Upload VTT File
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <button
           disabled={saving}
-          className="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-slate-800 disabled:opacity-50 transition-all flex justify-center items-center gap-3 shadow-lg shadow-slate-200 group"
+          className="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold uppercase flex justify-center items-center gap-3"
         >
-          {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-          {saving ? 'Synchronizing...' : 'Update Module Entry'}
+          {saving ? <Loader2 className="animate-spin" /> : <Save />}
+          Update Lesson
         </button>
       </form>
     </div>
-  )
+  );
 }

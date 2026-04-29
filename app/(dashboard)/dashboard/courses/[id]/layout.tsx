@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
-import { CheckCircle2, Circle, Lock, LayoutGrid } from "lucide-react";
-import { getLessonsForCourse, getUserProgressForCourse } from "@/lib/queries";
+import { CheckCircle2, Circle, Lock, LayoutGrid, Award } from "lucide-react";
+import { getModulesWithLessonsForCourse, getUserProgressForCourse } from "@/lib/queries";
 
 export const revalidate = 30;
 
@@ -13,7 +13,7 @@ export default async function CourseLayout({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const lessons = await getLessonsForCourse(id);
+  const modules = await getModulesWithLessonsForCourse(id);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -22,6 +22,9 @@ export default async function CourseLayout({
     const progress = await getUserProgressForCourse(user.id, id);
     completedIds = new Set(progress.map((p) => p.lesson_id));
   }
+
+  const totalLessons = modules.reduce((sum, module) => sum + (module.lessons?.length || 0), 0);
+  const isAllComplete = completedIds.size === totalLessons && totalLessons > 0;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-white">
@@ -42,55 +45,105 @@ export default async function CourseLayout({
           <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div 
               className="h-full bg-emerald-500 transition-all duration-500" 
-              style={{ width: `${(completedIds.size / (lessons?.length || 1)) * 100}%` }}
+              style={{ width: `${(completedIds.size / (totalLessons || 1)) * 100}%` }}
             />
           </div>
           <p className="text-[10px] text-slate-500 font-semibold mt-2 uppercase">
-            {completedIds.size} / {lessons?.length || 0} Modules Complete
+            {completedIds.size} / {totalLessons || 0} Lessons Complete
           </p>
         </div>
 
-        {/* Scrollable Lesson List */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          {lessons?.map((lesson, idx) => {
-            const isCompleted = completedIds.has(lesson.id);
-            const isFirstLesson = idx === 0;
-            const isUnlocked = isFirstLesson || completedIds.has(lessons[idx - 1]?.id);
+        {/* Scrollable Module and Lesson List */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-4">
+          {!modules || modules.length === 0 ? (
+            <div className="p-6 text-center space-y-3">
+              <p className="text-sm font-semibold text-slate-600">No modules found</p>
+            </div>
+          ) : (
+            modules.map((module: any, moduleIdx: number) => {
+              const moduleLessons = (module.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index);
+              
+              return (
+                <div key={module.id} className="space-y-1">
+                  {/* Module Header */}
+                  <div className="px-4 py-2">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                      Module {module.order_index.toString().padStart(2, '0')}
+                    </span>
+                    <p className="text-[10px] font-semibold text-slate-700">{module.title}</p>
+                  </div>
 
-            return (
-              <Link
-                key={lesson.id}
-                href={isUnlocked ? `/dashboard/courses/${id}/lessons/${lesson.id}` : "#"}
-                className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${
-                  !isUnlocked 
-                    ? "opacity-40 cursor-not-allowed" 
-                    : "hover:bg-white hover:shadow-sm group active:scale-[0.98]"
+                  {/* Lessons in Module */}
+                  {moduleLessons.map((lesson: any, lessonIdx: number) => {
+                    const isCompleted = completedIds.has(lesson.id);
+                    
+                    let isUnlocked = false;
+
+                    if (moduleIdx === 0 && lessonIdx === 0) {
+                      isUnlocked = true;
+                    } else if (lessonIdx > 0) {
+                      isUnlocked = completedIds.has(moduleLessons[lessonIdx - 1]?.id);
+                    } else if (moduleIdx > 0 && lessonIdx === 0) {
+                      const prevModule = modules[moduleIdx - 1];
+                      const prevModuleLessons = (prevModule.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index);
+                      const lastLessonOfPrevModule = prevModuleLessons[prevModuleLessons.length - 1];
+                      isUnlocked = completedIds.has(lastLessonOfPrevModule?.id);
+                    }
+
+                    return (
+                      <Link
+                        key={lesson.id}
+                        href={isUnlocked ? `/dashboard/courses/${id}/lessons/${lesson.id}` : "#"}
+                        className={`flex items-center gap-3 p-3 ml-2 rounded-lg transition-all border-l-2 ${
+                          !isUnlocked 
+                            ? "opacity-40 cursor-not-allowed border-slate-100" 
+                            : "hover:bg-white hover:shadow-sm group active:scale-[0.98] border-slate-200 hover:border-[#00ADEF]"
+                        }`}
+                      >
+                        <div className="shrink-0">
+                          {isCompleted ? (
+                            <div className="p-1 rounded-full text-emerald-600 bg-emerald-100/50">
+                              <CheckCircle2 size={12} strokeWidth={3} />
+                            </div>
+                          ) : !isUnlocked ? (
+                            <Lock size={12} className="text-slate-400" />
+                          ) : (
+                            <Circle size={14} className="text-slate-300 group-hover:text-[#00adef] transition-colors" />
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-widest">
+                                Lesson {lesson.order_index.toString().padStart(2, '0')}
+                            </span>
+                            <span className={`text-[10px] font-medium leading-tight truncate ${
+                                isCompleted ? "text-slate-400" : "text-slate-700"
+                            }`}>
+                                {lesson.title}
+                            </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })
+          )}
+
+          {/* Final Assessment Shortcut Link */}
+          <div className="pt-4 mt-4 border-t border-slate-100">
+             <Link
+                href={isAllComplete ? `/dashboard/courses/${id}/final-quiz` : "#"}
+                className={`flex items-center gap-3 p-4 rounded-xl transition-all ${
+                    isAllComplete 
+                    ? "bg-purple-50 text-purple-700 hover:bg-purple-100" 
+                    : "opacity-40 cursor-not-allowed bg-slate-100 text-slate-400"
                 }`}
-              >
-                <div className="shrink-0">
-                  {isCompleted ? (
-                    <div className="p-1 rounded-full text-emerald-600 bg-emerald-100/50">
-                      <CheckCircle2 size={14} strokeWidth={3} />
-                    </div>
-                  ) : !isUnlocked ? (
-                    <Lock size={14} className="text-slate-400" />
-                  ) : (
-                    <Circle size={16} className="text-slate-300 group-hover:text-[#00adef] transition-colors" />
-                  )}
-                </div>
-                <div className="flex flex-col">
-                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
-                        Module {(idx + 1).toString().padStart(2, '0')}
-                    </span>
-                    <span className={`text-[11px] font-medium leading-tight ${
-                        isCompleted ? "text-slate-400" : "text-slate-700"
-                    }`}>
-                        {lesson.title}
-                    </span>
-                </div>
-              </Link>
-            );
-          })}
+             >
+                <Award size={16} className={isAllComplete ? "text-purple-600" : ""} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Final Assessment</span>
+                {!isAllComplete && <Lock size={12} className="ml-auto" />}
+             </Link>
+          </div>
         </nav>
 
         {/* Footer info for sidebar */}

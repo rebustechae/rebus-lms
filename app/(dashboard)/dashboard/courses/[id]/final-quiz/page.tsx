@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { createClient } from "@/utils/supabase/client";
 import confetti from "canvas-confetti";
 import { useRouter } from "next/navigation";
-import { XCircle, RefreshCcw, CheckCircle2, Award, ChevronRight, ArrowLeft } from "lucide-react";
+import { XCircle, RefreshCcw, CheckCircle2, Award, ChevronRight, ArrowLeft, Lock, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function FinalCourseQuiz({
@@ -18,36 +18,73 @@ export default function FinalCourseQuiz({
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  
+  // NEW: Guard states to prevent skipping
+  const [isLocked, setIsLocked] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  
   const supabase = createClient();
 
   useEffect(() => {
-    async function fetchQuiz() {
+    async function validateAndFetch() {
+      setCheckingAccess(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return router.push("/");
+
+      // 1. Get total lesson count for this specific course
+      const { count: totalLessons } = await supabase
+        .from("lessons")
+        .select("*", { count: "exact", head: true })
+        .eq("course_id", params.id);
+
+      // 2. Get user's completed lessons count for THIS course only
+      const { data: progress } = await supabase
+        .from("user_progress")
+        .select(`
+          lesson_id,
+          lessons!inner(course_id)
+        `)
+        .eq("user_id", user.id)
+        .eq("lessons.course_id", params.id);
+
+      const completedCount = progress?.length || 0;
+
+      // 3. Gatekeeper: If they haven't finished all lessons, lock the page
+      if (totalLessons && completedCount < totalLessons) {
+        setIsLocked(true);
+        setCheckingAccess(false);
+        return;
+      }
+
+      // 4. Allowed: Fetch and randomize the quiz questions
       const sessionKey = `quiz_order_${params.id}`;
       const savedOrder = sessionStorage.getItem(sessionKey);
 
       if (savedOrder) {
         setQuestions(JSON.parse(savedOrder));
-        return; 
-      }
+      } else {
+        const { data } = await supabase
+          .from("quizzes")
+          .select("*")
+          .eq("course_id", params.id);
 
-      const { data } = await supabase
-        .from("quizzes")
-        .select("*")
-        .eq("course_id", params.id);
-
-      if (data) {
-        const randomizedData = data
-          .map((q) => ({
-            ...q,
-            options: [...q.options].sort(() => Math.random() - 0.5),
-          }))
-          .sort(() => Math.random() - 0.5);
-        sessionStorage.setItem(sessionKey, JSON.stringify(randomizedData));
-        setQuestions(randomizedData);
+        if (data) {
+          const randomizedData = data
+            .map((q) => ({
+              ...q,
+              options: [...q.options].sort(() => Math.random() - 0.5),
+            }))
+            .sort(() => Math.random() - 0.5);
+          sessionStorage.setItem(sessionKey, JSON.stringify(randomizedData));
+          setQuestions(randomizedData);
+        }
       }
+      setCheckingAccess(false);
     }
-    fetchQuiz();
-  }, [params.id, supabase]);
+    
+    validateAndFetch();
+  }, [params.id, supabase, router]);
 
   const calculateResults = async () => {
     if (questions.length === 0 || Object.keys(answers).length < questions.length) return;
@@ -120,10 +157,43 @@ export default function FinalCourseQuiz({
     );
   };
 
+  // --- LOADING RENDER ---
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-slate-400 gap-4">
+        <Loader2 className="animate-spin text-[#00ADEF]" size={32} />
+        <p className="font-bold text-xs uppercase tracking-widest">Verifying Completion...</p>
+      </div>
+    );
+  }
+
+  // --- LOCKED RENDER ---
+  if (isLocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-xl shadow-slate-200/50 border border-slate-100 text-center space-y-6">
+          <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <Lock size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Assessment Locked</h2>
+          <p className="text-slate-500 text-sm leading-relaxed">
+            You must complete all lessons in this course before you can take the final assessment.
+          </p>
+          <button 
+            onClick={() => router.push(`/dashboard/courses/${params.id}`)}
+            className="w-full bg-[#00ADEF] text-white py-4 rounded-2xl font-bold hover:bg-[#0096d1] transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-100"
+          >
+            <ArrowLeft size={18} /> Back to Course
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (questions.length === 0)
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400 font-bold px-6 text-center">
-        Establishing secure connection to assessment server...
+        No assessment questions found for this course.
       </div>
     );
 
@@ -189,7 +259,6 @@ export default function FinalCourseQuiz({
                 </p>
               </div>
               
-              {/* pl-0 on mobile, pl-12 on desktop to save space */}
               <div className="grid gap-2 md:gap-3 pl-0 md:pl-12">
                 {q.options.map((opt: string) => (
                   <button
