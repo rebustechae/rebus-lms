@@ -4,7 +4,14 @@ import ReactMarkdown from "react-markdown";
 import { useState, useEffect, use, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { ChevronRight, CheckCircle2, ChevronLeft, Loader2 } from "lucide-react";
+import {
+  ChevronRight,
+  CheckCircle2,
+  ChevronLeft,
+  Loader2,
+  FileText,
+  ExternalLink,
+} from "lucide-react";
 
 import VideoPlayer from "@/app/(dashboard)/dashboard/_components/VideoPlayer";
 import { markLessonComplete } from "../../actions";
@@ -17,22 +24,26 @@ export default function LessonContentPage({
   const params = use(paramsPromise);
   const router = useRouter();
   const footerRef = useRef<HTMLDivElement>(null);
-  const videoSectionRef = useRef<HTMLDivElement>(null); // NEW: Ref for the video section
+  const videoSectionRef = useRef<HTMLDivElement>(null);
 
   const [lesson, setLesson] = useState<any>(null);
   const [nextLessonId, setNextLessonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [videoCompleted, setVideoCompleted] = useState(false);
+  const [readingCompleted, setReadingCompleted] = useState(false);
   const [isFirstViewing, setIsFirstViewing] = useState(false);
   const [completionSaved, setCompletionSaved] = useState(false);
 
   const supabase = createClient();
 
-  // FEATURE: Auto-scroll to video when a new lesson loads
+  // Unified unlock logic: Checks if required components (Video/PDF) are finished
+  const canContinue =
+    (!lesson?.video_url || videoCompleted) &&
+    (!lesson?.pdf_url || readingCompleted);
+
   useEffect(() => {
     if (!loading && lesson) {
-      // Small timeout to ensure the DOM has rendered the video container
       const scrollTimeout = setTimeout(() => {
         videoSectionRef.current?.scrollIntoView({
           behavior: "smooth",
@@ -41,29 +52,25 @@ export default function LessonContentPage({
       }, 100);
       return () => clearTimeout(scrollTimeout);
     }
-  }, [loading, params.lessonId]); // Triggers when loading finished OR lesson ID changes
+  }, [loading, params.lessonId]);
 
-  // FEATURE: Handle Fullscreen Exit and Auto-Scroll to Footer on Completion
   useEffect(() => {
-    if (videoCompleted && !loading) {
+    if (canContinue && !loading) {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
-
       const scrollTimeout = setTimeout(() => {
         footerRef.current?.scrollIntoView({
           behavior: "smooth",
           block: "center",
         });
       }, 600);
-
       return () => clearTimeout(scrollTimeout);
     }
-  }, [videoCompleted, loading]);
+  }, [canContinue, loading]);
 
   useEffect(() => {
     async function getLessonData() {
-      // (Keep your existing data fetching logic here...)
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -71,15 +78,7 @@ export default function LessonContentPage({
 
       const { data: lessonData } = await supabase
         .from("lessons")
-        .select(
-          `
-          *,
-          modules!inner (
-            id,
-            order_index
-          )
-        `,
-        )
+        .select(`*, modules!inner (id, order_index)`)
         .eq("id", params.lessonId)
         .single();
 
@@ -87,12 +86,7 @@ export default function LessonContentPage({
 
       const { data: previousLessons } = await supabase
         .from("lessons")
-        .select(
-          `
-          id,
-          modules!inner ( order_index )
-        `,
-        )
+        .select(`id, modules!inner ( order_index )`)
         .eq("course_id", params.id)
         .or(
           `modules.order_index.lt.${lessonData.modules.order_index},and(module_id.eq.${lessonData.module_id},order_index.lt.${lessonData.order_index})`,
@@ -123,7 +117,11 @@ export default function LessonContentPage({
         .maybeSingle();
 
       setIsFirstViewing(!progress);
-      setVideoCompleted(!!progress);
+
+      if (progress) {
+        setVideoCompleted(true);
+        setReadingCompleted(true);
+      }
 
       const { data: sameModuleLessons } = await supabase
         .from("lessons")
@@ -148,7 +146,6 @@ export default function LessonContentPage({
           .order("order_index", { ascending: true })
           .limit(1)
           .maybeSingle();
-
         if (nextModule) {
           const { data: firstLesson } = await supabase
             .from("lessons")
@@ -163,14 +160,13 @@ export default function LessonContentPage({
       setLoading(false);
     }
     getLessonData();
-    // Reset states for new lesson
     setVideoCompleted(false);
+    setReadingCompleted(false);
     setCompletionSaved(false);
   }, [params.lessonId, params.id, router, supabase]);
 
   useEffect(() => {
-    if (loading || completionSaved || !videoCompleted || !isFirstViewing)
-      return;
+    if (loading || completionSaved || !canContinue || !isFirstViewing) return;
     const save = async () => {
       setCompletionSaved(true);
       await markLessonComplete(params.id, params.lessonId);
@@ -178,7 +174,7 @@ export default function LessonContentPage({
     };
     save();
   }, [
-    videoCompleted,
+    canContinue,
     loading,
     completionSaved,
     isFirstViewing,
@@ -221,8 +217,8 @@ export default function LessonContentPage({
 
           {lesson.format === "video" && lesson.video_url && (
             <div
-              ref={videoSectionRef} // Attached the ref here
-              className="rounded-2xl overflow-hidden shadow-2xl bg-black scroll-mt-24"
+              ref={videoSectionRef}
+              className="rounded-2xl overflow-hidden shadow-2xl bg-black scroll-mt-24 mb-12"
             >
               <VideoPlayer
                 videoUrl={lesson.video_url}
@@ -235,6 +231,48 @@ export default function LessonContentPage({
             </div>
           )}
         </header>
+
+        {/* READING MATERIAL SECTION */}
+        {lesson.pdf_url && (
+          <section className="mb-16 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#00ADEF]/10 rounded-lg text-[#00ADEF]">
+                  <FileText size={20} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Required Reading
+                  </h3>
+                  {readingCompleted && (
+                    <span className="bg-emerald-100 text-emerald-700 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                      Read
+                    </span>
+                  )}
+                </div>
+              </div>
+              <a
+                href={lesson.pdf_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs font-bold text-[#00ADEF] hover:underline"
+              >
+                Open in New Tab <ExternalLink size={14} />
+              </a>
+            </div>
+
+            <div className="w-full h-[600px] bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-sm relative">
+              <iframe
+                // split('?')[0] takes "https://site.com/file.pdf?download=false"
+                // and turns it into "https://site.com/file.pdf"
+                src={`${lesson.pdf_url.split("?")[0]}#toolbar=0&navpanes=0`}
+                className="w-full h-full"
+                title="Reading Material"
+                onLoad={() => setReadingCompleted(true)}
+              />
+            </div>
+          </section>
+        )}
 
         <article
           className="prose prose-slate max-w-none text-base md:text-lg select-none leading-relaxed text-slate-700
@@ -253,7 +291,7 @@ export default function LessonContentPage({
         >
           <div className="flex flex-col items-center gap-8">
             <button
-              disabled={!videoCompleted}
+              disabled={!canContinue}
               onClick={() => {
                 router.push(
                   nextLessonId
@@ -263,16 +301,18 @@ export default function LessonContentPage({
               }}
               className={`w-full py-6 rounded-2xl font-semibold transition-all flex items-center justify-center gap-3 text-white
                 ${
-                  videoCompleted
+                  canContinue
                     ? nextLessonId
                       ? "bg-[#00ADEF] hover:bg-[#0098D4] shadow-xl shadow-blue-200"
                       : "bg-[#662D91] shadow-xl shadow-purple-200"
                     : "bg-slate-100 text-slate-300 cursor-not-allowed"
                 }`}
             >
-              {videoCompleted && <CheckCircle2 size={18} />}
-              {!videoCompleted
-                ? "Complete video to continue"
+              {canContinue && <CheckCircle2 size={18} />}
+              {!canContinue
+                ? lesson.video_url && !videoCompleted
+                  ? "Complete video to continue"
+                  : "Loading reading material..."
                 : nextLessonId
                   ? "Next Lesson"
                   : "Final Assessment"}
