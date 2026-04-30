@@ -207,11 +207,21 @@ export default function LessonContentPage({
           Back to Directory
         </button>
 
-        <header className="mb-10 md:mb-16">
+        <header className="mb-10 md:mb-16 relative">
+          {/* LOGO IN TOP RIGHT */}
+          <div className="absolute top-0 right-0">
+            <img
+              src="/logo.png"
+              alt="Rebus Holdings Logo"
+              className="h-10 md:h-12 w-auto opacity-80 hover:opacity-100 transition-opacity"
+            />
+          </div>
+
           <span className="text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest bg-slate-100 text-slate-500">
             Lesson {lesson.order_index}
           </span>
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-semibold text-slate-900 mt-8 mb-12 leading-tight">
+
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-semibold text-slate-900 mt-8 mb-12 leading-tight pr-24">
             {lesson.title}
           </h1>
 
