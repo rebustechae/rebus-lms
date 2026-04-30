@@ -228,7 +228,7 @@ export default function LessonContentPage({
           {lesson.format === "video" && lesson.video_url && (
             <div
               ref={videoSectionRef}
-              className="rounded-2xl overflow-hidden shadow-2xl bg-black scroll-mt-24 mb-12"
+              className="rounded-xl overflow-hidden shadow-2xl bg-black scroll-mt-24 mb-12"
             >
               <VideoPlayer
                 videoUrl={lesson.video_url}

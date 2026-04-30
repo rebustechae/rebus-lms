@@ -28,8 +28,15 @@ export default async function CourseLayout({
   const isAllComplete = completedIds.size === totalLessons && totalLessons > 0;
 
   return (
+    // Changed: ensured h-screen is only forced on md+ to prevent mobile overlap
     <div className="flex flex-col md:flex-row min-h-screen bg-white">
-      <aside className="w-full md:w-80 border-r border-slate-100 flex flex-col h-auto md:h-screen sticky top-0 bg-slate-50/30">
+      
+      {/* SIDEBAR CHANGES:
+          1. Removed 'sticky top-0' from mobile (it causes the overlap you see).
+          2. Added 'md:sticky md:top-0' so it only sticks on desktop.
+          3. Added 'h-fit' for mobile so it grows with content, and 'md:h-screen' for desktop.
+      */}
+      <aside className="w-full md:w-80 border-r border-slate-100 flex flex-col h-fit md:h-screen md:sticky md:top-0 bg-slate-50/30 z-20">
         
         <div className="p-6 border-b border-slate-100 bg-white">
           <Link 
@@ -55,11 +62,14 @@ export default async function CourseLayout({
           </p>
         </div>
 
-        <CourseSidebarNav 
-            modules={modules} 
-            completedIds={completedIds} 
-            courseId={id} 
-        />
+        {/* Scrollable area for lessons - added flex-1 to allow footer to sit at bottom on desktop */}
+        <div className="flex-1 overflow-y-auto">
+          <CourseSidebarNav 
+              modules={modules} 
+              completedIds={completedIds} 
+              courseId={id} 
+          />
+        </div>
 
         <div className="p-4 border-t border-slate-100 bg-white">
            <Link
@@ -86,7 +96,8 @@ export default async function CourseLayout({
         </div>
       </aside>
 
-      <main className="flex-1 bg-white min-h-screen overflow-y-auto">
+      {/* Main Content Area */}
+      <main className="flex-1 bg-white min-h-screen">
         <div className="max-w-4xl mx-auto p-4 md:p-12 lg:p-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {children}
         </div>

@@ -132,14 +132,17 @@ export default function VideoPlayer({
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
       className={`w-full bg-black overflow-hidden shadow-2xl transition-all relative group/container ${
-        isFullscreen ? "rounded-0" : "rounded-xl md:rounded-[2rem] aspect-video"
-      }`}
+      isFullscreen ? "rounded-0" : "rounded-xl md:rounded-[2rem] aspect-video"
+    }`}
       style={
-        {
-          "--webkit-text-size-adjust": "100%",
-          "--cue-bottom": showControls ? "85px" : "25px",
-        } as React.CSSProperties
-      }
+      {
+        "--webkit-text-size-adjust": "100%",
+        "--cue-bottom": showControls ? "85px" : "25px",
+        // FORCES WRAPPING ON HARDWARE ACCELERATED VIDEO
+        "maskImage": "radial-gradient(white, black)", 
+        "WebkitMaskImage": "-webkit-radial-gradient(white, black)"
+      } as React.CSSProperties
+    }
     >
       <style>{`
         video::cue {
@@ -168,7 +171,9 @@ export default function VideoPlayer({
           console.error("Video error:", e);
           setError("Failed to load video file");
         }}
-        className="w-full h-full cursor-pointer"
+        className={`w-full h-full cursor-pointer object-cover ${
+        isFullscreen ? "rounded-0" : "rounded-xl md:rounded-[2rem]"
+      }`}
         playsInline
       >
         {captionsUrl && (
