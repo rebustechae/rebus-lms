@@ -19,8 +19,7 @@ interface VideoPlayerProps {
   videoUrl: string;
   isFirstViewing: boolean;
   captionsUrl?: string;
-  autoPlay?: boolean; // NEW
-  muted?: boolean;    // NEW
+  muted?: boolean; // NEW
   onVideoProgress?: (progress: number) => void;
   onVideoComplete: () => void;
 }
@@ -29,19 +28,18 @@ export default function VideoPlayer({
   videoUrl,
   isFirstViewing,
   captionsUrl,
-  autoPlay = false,
   muted: initialMuted = false,
   onVideoProgress,
   onVideoComplete,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // Sync state with props
-  const [playing, setPlaying] = useState(autoPlay);
+  const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(autoPlay ? true : initialMuted); // Force mute for autoplay success
-  
+  const [muted, setMuted] = useState(initialMuted);
+
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -49,16 +47,6 @@ export default function VideoPlayer({
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showControls, setShowControls] = useState(true);
-
-  // FEATURE: Handle Autoplay on URL change
-  useEffect(() => {
-    if (autoPlay && videoRef.current) {
-      setPlaying(true);
-      videoRef.current.play().catch((err) => {
-        console.log("Autoplay blocked by browser. User must interact to play with sound.", err);
-      });
-    }
-  }, [videoUrl, autoPlay]);
 
   // Toggle Fullscreen logic
   const toggleFullscreen = () => {
@@ -193,6 +181,21 @@ export default function VideoPlayer({
           />
         )}
       </video>
+
+      {/* Large Center Play Button Overlay */}
+      {!playing && !error && (
+        <div
+          className="absolute inset-0 flex items-center justify-center z-20 group/play"
+          onClick={() => setPlaying(true)}
+        >
+          <button
+            className="w-20 h-20 md:w-24 md:h-24 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white transition-all duration-300 group-hover/play:scale-110 group-hover/play:bg-white/20 shadow-2xl"
+            aria-label="Play Video"
+          >
+            <Play size={40} fill="white" className="ml-1.5" />
+          </button>
+        </div>
+      )}
 
       {/* Locked Badge */}
       {isFirstViewing && (

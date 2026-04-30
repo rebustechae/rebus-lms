@@ -234,7 +234,6 @@ export default function LessonContentPage({
                 videoUrl={lesson.video_url}
                 captionsUrl={lesson.captions_url}
                 isFirstViewing={isFirstViewing}
-                autoPlay={true}
                 muted={true}
                 onVideoComplete={() => setVideoCompleted(true)}
               />

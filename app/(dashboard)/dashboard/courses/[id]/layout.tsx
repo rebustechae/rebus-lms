@@ -70,7 +70,7 @@ export default async function CourseLayout({
                   : "opacity-40 cursor-not-allowed bg-slate-50 border-transparent text-slate-400"
               }`}
            >
-              <Award size={16} className={isAllComplete ? "text-purple-600 animate-bounce" : ""} />
+              <Award size={16} className={isAllComplete ? "text-purple-600" : ""} />
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Final Assessment</span>
                 {!isAllComplete && <span className="text-[8px] font-medium text-slate-400">Locked until all lessons are completed</span>}
