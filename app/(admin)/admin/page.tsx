@@ -8,15 +8,11 @@ import DeleteCourseButton from "./_components/DeleteCourseButton";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  console.log("-----------------------------------------");
-  console.log("EXECUTION CHECK: Server is rendering /admin");
   
   const supabase = await createClient();
 
   // 1. SESSION CHECK
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  console.log("AUTH STATUS:", user ? `Logged in as ${user.email}` : "No User Found");
   if (authError) console.error("AUTH ERROR:", authError.message);
 
   if (!user) {

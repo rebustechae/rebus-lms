@@ -6,8 +6,6 @@ import {
   Pause,
   RotateCcw,
   RotateCw,
-  SkipBack,
-  SkipForward,
   Volume2,
   VolumeX,
   Lock,
@@ -21,6 +19,8 @@ interface VideoPlayerProps {
   videoUrl: string;
   isFirstViewing: boolean;
   captionsUrl?: string;
+  autoPlay?: boolean; // NEW
+  muted?: boolean;    // NEW
   onVideoProgress?: (progress: number) => void;
   onVideoComplete: () => void;
 }
@@ -29,14 +29,19 @@ export default function VideoPlayer({
   videoUrl,
   isFirstViewing,
   captionsUrl,
+  autoPlay = false,
+  muted: initialMuted = false,
   onVideoProgress,
   onVideoComplete,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [playing, setPlaying] = useState(false);
+  
+  // Sync state with props
+  const [playing, setPlaying] = useState(autoPlay);
   const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(autoPlay ? true : initialMuted); // Force mute for autoplay success
+  
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +49,16 @@ export default function VideoPlayer({
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showControls, setShowControls] = useState(true);
+
+  // FEATURE: Handle Autoplay on URL change
+  useEffect(() => {
+    if (autoPlay && videoRef.current) {
+      setPlaying(true);
+      videoRef.current.play().catch((err) => {
+        console.log("Autoplay blocked by browser. User must interact to play with sound.", err);
+      });
+    }
+  }, [videoUrl, autoPlay]);
 
   // Toggle Fullscreen logic
   const toggleFullscreen = () => {
@@ -134,7 +149,6 @@ export default function VideoPlayer({
       style={
         {
           "--webkit-text-size-adjust": "100%",
-          // Dynamic CSS Variable for Caption Height
           "--cue-bottom": showControls ? "85px" : "25px",
         } as React.CSSProperties
       }
@@ -145,7 +159,6 @@ export default function VideoPlayer({
           color: white;
           font-family: sans-serif;
           font-size: 14px;
-          /* Uses the dynamic variable defined in the inline style above */
           bottom: var(--cue-bottom); 
           transition: bottom 0.3s ease-in-out;
         }
@@ -154,12 +167,13 @@ export default function VideoPlayer({
       <video
         ref={videoRef}
         src={videoUrl}
+        muted={muted}
         crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
         onEnded={() => {
           setPlaying(false);
-          onVideoComplete();
+          onVideoComplete(); // Parent page handles exitFullscreen and scroll
         }}
         onClick={() => setPlaying(!playing)}
         onError={(e) => {
@@ -311,7 +325,6 @@ export default function VideoPlayer({
                     setMuted(false);
                   }}
                   className="h-24 w-1 accent-white appearance-none bg-white/20 rounded-full cursor-pointer vertical-slider"
-                  style={{ WebkitAppearance: "slider-vertical" } as any}
                 />
               </div>
               <button onClick={() => setMuted(!muted)} className="text-white">

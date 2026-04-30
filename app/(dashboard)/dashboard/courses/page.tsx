@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { BookOpen, Play, CheckCircle2, Lock } from "lucide-react";
+import { BookOpen, Play, CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export default async function CourseCatalogPage() {
@@ -9,17 +9,23 @@ export default async function CourseCatalogPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const userEmail = user?.email?.toLowerCase();
 
-  // 2. Fetch courses with completions AND whitelist info
-  // We fetch 'course_access' to check if the user is whitelisted
+  // 2. Fetch courses with completions, access whitelist, AND user progress
   const { data: allCourses, error } = await supabase
     .from("courses")
     .select(`
       *,
-      course_completions(id),
+      lessons (id),
+      course_completions(passed),
       course_access(user_email)
     `)
     .eq('course_completions.user_id', user?.id)
     .order("created_at", { ascending: true });
+
+  // 3. Fetch the specific lesson progress for the user to determine "In Progress" status
+  const { data: userProgress } = await supabase
+    .from("user_progress")
+    .select("lesson_id, lessons!inner(course_id)")
+    .eq("user_id", user?.id);
 
   if (error) {
     return (
@@ -30,18 +36,13 @@ export default async function CourseCatalogPage() {
     );
   }
 
-  // 3. FILTER: Only show courses the user is allowed to see
+  // 4. FILTER: Only show courses the user is allowed to see
   const visibleCourses = allCourses?.filter(course => {
-    // If course is public, everyone sees it
     if (!course.is_private) return true;
-
-    // If private, check if the user's email exists in the whitelist for this course
-    const isWhitelisted = course.course_access?.some(
+    return course.course_access?.some(
       (access: any) => access.user_email.toLowerCase() === userEmail
     );
-
-    return isWhitelisted;
-  });
+  }) || [];
 
   return (
     <div className="space-y-8 md:space-y-12 max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-10">
@@ -56,8 +57,18 @@ export default async function CourseCatalogPage() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-        {visibleCourses?.map((course) => {
-          const isCompleted = course.course_completions && course.course_completions.length > 0;
+        {visibleCourses.map((course) => {
+          // Calculate if completed
+          const isCompleted = course.course_completions && course.course_completions.length > 0 
+            ? course.course_completions[0].passed 
+            : false;
+
+          // Calculate if in progress
+          const completedLessonsCount = userProgress?.filter(
+            (p: any) => p.lessons?.course_id === course.id
+          ).length || 0;
+          
+          const hasStarted = completedLessonsCount > 0;
 
           return (
             <div 
@@ -70,19 +81,24 @@ export default async function CourseCatalogPage() {
                 </div>
               )}
 
-              {/* Private Badge */}
-              {course.is_private && (
+              {/* Lock logic consistent with Dashboard */}
+              {course.is_private && !hasStarted && !isCompleted && (
                 <div className="absolute top-4 right-4 text-slate-400">
                   <Lock size={14} />
                 </div>
               )}
 
               <div className="space-y-4">
-                <div className="flex justify-between items-start text-slate-300 group-hover:text-rebus-blue transition-colors">
+                <div className="flex justify-between items-start text-slate-300 group-hover:text-[#00ADEF] transition-colors">
                   <BookOpen size={18} />
+                  {hasStarted && !isCompleted && (
+                    <span className="text-[10px] font-bold bg-blue-50 text-[#00ADEF] px-2 py-0.5 rounded uppercase">
+                      In Progress
+                    </span>
+                  )}
                 </div>
 
-                <h3 className="text-lg md:text-xl font-bold text-slate-900 group-hover:text-rebus-blue transition-colors leading-tight">
+                <h3 className="text-lg md:text-xl font-bold text-slate-900 group-hover:text-[#00ADEF] transition-colors leading-tight">
                   {course.title}
                 </h3>
 
@@ -95,11 +111,25 @@ export default async function CourseCatalogPage() {
                   className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
                     isCompleted 
                     ? "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200" 
-                    : "bg-rebus-blue text-white hover:bg-[#0096d1] shadow-lg shadow-rebus-blue/10"
+                    : "bg-[#00ADEF] text-white hover:bg-[#0096d1] shadow-lg shadow-[#00ADEF]/10"
                   }`}
                 >
-                  <Play size={16} fill="currentColor" />
-                  {isCompleted ? "Course Complete" : "Start Course"}
+                  {isCompleted ? (
+                    <>
+                      <CheckCircle2 size={16} />
+                      <span>Review Content</span>
+                    </>
+                  ) : hasStarted ? (
+                    <>
+                      <ArrowRight size={16} />
+                      <span>Continue Course</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play size={16} fill="currentColor" />
+                      <span>Start Course</span>
+                    </>
+                  )}
                 </Link>
               </div>
             </div>
@@ -107,7 +137,7 @@ export default async function CourseCatalogPage() {
         })}
       </div>
 
-      {visibleCourses?.length === 0 && (
+      {visibleCourses.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 md:p-20 text-center bg-slate-50/50">
           <p className="text-sm md:text-base text-slate-400 font-semibold uppercase tracking-widest">
             No authorized courses available.

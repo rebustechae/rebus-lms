@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { createClient } from "@/utils/supabase/client";
 import confetti from "canvas-confetti";
 import { useRouter } from "next/navigation";
-import { XCircle, RefreshCcw, CheckCircle2, Award, ChevronRight, ArrowLeft, Lock, Loader2 } from "lucide-react";
+import { RefreshCcw, Award, ChevronRight, ArrowLeft, Lock, Loader2, Timer } from "lucide-react";
 import Link from "next/link";
 
 export default function FinalCourseQuiz({
@@ -19,56 +19,102 @@ export default function FinalCourseQuiz({
   const [submitted, setSubmitted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   
-  // NEW: Guard states to prevent skipping
   const [isLocked, setIsLocked] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
   
+  // --- TIMER STATE ---
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const QUIZ_DURATION = 30 * 60;
+
   const supabase = createClient();
+
+  // 1. Initial Load: Restore answers and sync timer
+  useEffect(() => {
+    const savedAnswers = sessionStorage.getItem(`quiz_answers_${params.id}`);
+    if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
+
+    const startTime = sessionStorage.getItem(`quiz_start_time_${params.id}`);
+    if (startTime) {
+      const elapsed = Math.floor((Date.now() - parseInt(startTime)) / 1000);
+      const remaining = QUIZ_DURATION - elapsed;
+      if (remaining <= 0) {
+        handleReset();
+      } else {
+        setTimeLeft(remaining);
+      }
+    } else {
+      // First time landing on quiz, set the start timestamp
+      const now = Date.now().toString();
+      sessionStorage.setItem(`quiz_start_time_${params.id}`, now);
+      setTimeLeft(QUIZ_DURATION);
+    }
+  }, [params.id]);
+
+  // 2. Timer Countdown Logic
+  useEffect(() => {
+    if (timeLeft === null || submitted || isLocked) return;
+
+    if (timeLeft <= 0) {
+      alert("Time is up! The quiz will now reset.");
+      handleReset();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, submitted, isLocked]);
+
+  const handleReset = () => {
+    sessionStorage.removeItem(`quiz_answers_${params.id}`);
+    sessionStorage.removeItem(`quiz_start_time_${params.id}`);
+    sessionStorage.removeItem(`quiz_order_${params.id}`);
+    window.location.reload();
+  };
+
+  // 3. Save answers to session storage as they click
+  const handleAnswerChange = (idx: number, opt: string) => {
+    const newAnswers = { ...answers, [idx]: opt };
+    setAnswers(newAnswers);
+    sessionStorage.setItem(`quiz_answers_${params.id}`, JSON.stringify(newAnswers));
+  };
 
   useEffect(() => {
     async function validateAndFetch() {
       setCheckingAccess(true);
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return router.push("/");
 
-      // 1. Get total lesson count for this specific course
+      // Gatekeeper Check
       const { count: totalLessons } = await supabase
         .from("lessons")
         .select("*", { count: "exact", head: true })
         .eq("course_id", params.id);
 
-      // 2. Get user's completed lessons count for THIS course only
       const { data: progress } = await supabase
         .from("user_progress")
-        .select(`
-          lesson_id,
-          lessons!inner(course_id)
-        `)
+        .select(`lesson_id, lessons!inner(course_id)`)
         .eq("user_id", user.id)
         .eq("lessons.course_id", params.id);
 
       const completedCount = progress?.length || 0;
 
-      // 3. Gatekeeper: If they haven't finished all lessons, lock the page
       if (totalLessons && completedCount < totalLessons) {
         setIsLocked(true);
         setCheckingAccess(false);
         return;
       }
 
-      // 4. Allowed: Fetch and randomize the quiz questions
+      // Randomize or Restore Question Order
       const sessionKey = `quiz_order_${params.id}`;
       const savedOrder = sessionStorage.getItem(sessionKey);
 
       if (savedOrder) {
         setQuestions(JSON.parse(savedOrder));
       } else {
-        const { data } = await supabase
-          .from("quizzes")
-          .select("*")
-          .eq("course_id", params.id);
-
+        const { data } = await supabase.from("quizzes").select("*").eq("course_id", params.id);
         if (data) {
           const randomizedData = data
             .map((q) => ({
@@ -82,7 +128,6 @@ export default function FinalCourseQuiz({
       }
       setCheckingAccess(false);
     }
-    
     validateAndFetch();
   }, [params.id, supabase, router]);
 
@@ -99,14 +144,12 @@ export default function FinalCourseQuiz({
     setSubmitted(true);
 
     if (scorePercent >= 90) {
-      setTimeout(() => {
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ["#00ADEF", "#662D91", "#FFFFFF"],
-        });
-      }, 200);
+      // Clear session data upon passing
+      sessionStorage.removeItem(`quiz_answers_${params.id}`);
+      sessionStorage.removeItem(`quiz_start_time_${params.id}`);
+      sessionStorage.removeItem(`quiz_order_${params.id}`);
+      
+      confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ["#00ADEF", "#662D91", "#FFFFFF"] });
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -120,6 +163,12 @@ export default function FinalCourseQuiz({
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const ScoreRing = ({ score }: { score: number }) => {
     const radius = 70;
     const circumference = 2 * Math.PI * radius;
@@ -129,122 +178,80 @@ export default function FinalCourseQuiz({
     return (
       <div className="relative flex items-center justify-center w-40 h-40 md:w-48 md:h-48 mx-auto">
         <svg className="w-full h-full transform -rotate-90">
-          <circle
-            cx="50%" cy="50%" r={radius}
-            stroke="currentColor" strokeWidth="10"
-            fill="transparent"
-            className="text-slate-100"
-          />
-          <circle
-            cx="50%" cy="50%" r={radius}
-            stroke="currentColor" strokeWidth="10"
-            fill="transparent"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            className={`transition-all duration-1000 ${isPass ? "text-[#662D91]" : "text-rose-500"}`}
-          />
+          <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="10" fill="transparent" className="text-slate-100" />
+          <circle cx="50%" cy="50%" r={radius} stroke="currentColor" strokeWidth="10" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className={`transition-all duration-1000 ${isPass ? "text-[#662D91]" : "text-rose-500"}`} />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className={`text-3xl md:text-4xl font-semibold tracking-tighter ${isPass ? "text-[#662D91]" : "text-rose-600"}`}>
-            {score}%
-          </span>
-          <span className="text-[8px] md:text-[10px] font-medium uppercase tracking-widest text-slate-400 mt-1">
-            Score
-          </span>
+          <span className={`text-3xl md:text-4xl font-semibold tracking-tighter ${isPass ? "text-[#662D91]" : "text-rose-600"}`}>{score}%</span>
+          <span className="text-[8px] md:text-[10px] font-medium uppercase tracking-widest text-slate-400 mt-1">Score</span>
         </div>
       </div>
     );
   };
 
-  // --- LOADING RENDER ---
-  if (checkingAccess) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-slate-400 gap-4">
-        <Loader2 className="animate-spin text-[#00ADEF]" size={32} />
-        <p className="font-bold text-xs uppercase tracking-widest">Verifying Completion...</p>
-      </div>
-    );
-  }
+  if (checkingAccess) return (
+    <div className="min-h-screen flex flex-col items-center justify-center text-slate-400 gap-4">
+      <Loader2 className="animate-spin text-[#00ADEF]" size={32} />
+      <p className="font-bold text-xs uppercase tracking-widest">Verifying Completion...</p>
+    </div>
+  );
 
-  // --- LOCKED RENDER ---
-  if (isLocked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
-        <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-xl shadow-slate-200/50 border border-slate-100 text-center space-y-6">
-          <div className="w-20 h-20 bg-purple-50 text-rebus-purple rounded-3xl flex items-center justify-center mx-auto mb-4">
-            <Lock size={40} />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Assessment Locked</h2>
-          <p className="text-slate-500 text-sm leading-relaxed">
-            You must complete all lessons in this course before you can take the final assessment.
-          </p>
-          <button 
-            onClick={() => router.push(`/dashboard/courses/${params.id}`)}
-            className="w-full bg-[#00ADEF] text-white py-4 rounded-2xl font-bold hover:bg-[#0096d1] transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-100"
-          >
-            <ArrowLeft size={18} /> Back to Course
-          </button>
-        </div>
+  if (isLocked) return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+      <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-xl shadow-slate-200/50 border border-slate-100 text-center space-y-6">
+        <div className="w-20 h-20 bg-purple-50 text-rebus-purple rounded-3xl flex items-center justify-center mx-auto mb-4"><Lock size={40} /></div>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Assessment Locked</h2>
+        <p className="text-slate-500 text-sm leading-relaxed">Please complete all course modules before attempting the final assessment.</p>
+        <button onClick={() => router.push(`/dashboard/courses/${params.id}`)} className="w-full bg-[#00ADEF] text-white py-4 rounded-2xl font-bold hover:bg-[#0096d1] transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-100">
+          <ArrowLeft size={18} /> Back to Course
+        </button>
       </div>
-    );
-  }
-
-  if (questions.length === 0)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400 font-bold px-6 text-center">
-        No assessment questions found for this course.
-      </div>
-    );
+    </div>
+  );
 
   return (
     <div className="max-w-3xl mx-auto py-8 md:py-16 px-4 sm:px-6 space-y-10 md:space-y-12">
-      <header className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-100 pb-6 md:pb-8 gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-slate-100 pb-6 md:pb-8 gap-4 sticky top-0 bg-white/90 backdrop-blur-md z-10 pt-4">
         <div className="space-y-1">
           <Link href={`/dashboard/courses/${params.id}`} className="inline-flex items-center gap-2 text-[10px] font-medium text-[#00ADEF] mb-2 hover:opacity-70 transition-all uppercase tracking-widest">
             <ArrowLeft size={14} strokeWidth={3} /> Exit to Syllabus
           </Link>
-          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-tight">
-            Final Assessment
-          </h1>
+          <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-tight">Final Assessment</h1>
         </div>
-        <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 w-fit">
-           <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Passing Grade: 90%</span>
-        </div>
+        
+        {/* TIMER UI */}
+        {!submitted && timeLeft !== null && (
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-mono font-bold transition-all ${timeLeft < 300 ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse" : "bg-slate-50 border-slate-100 text-slate-600"}`}>
+            <Timer size={18} />
+            <span>{formatTime(timeLeft)}</span>
+          </div>
+        )}
       </header>
 
       {submitted ? (
         <div className="bg-white border border-slate-200 rounded-[2rem] p-6 md:p-12 shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
-          <ScoreRing score={finalScore} />
-
-          <div className="space-y-3">
-            <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
-              {finalScore >= 90 ? "You have passed!" : "Assessment failed"}
-            </h2>
-            <p className="text-sm md:text-base text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
-              {finalScore >= 90
-                ? "You have successfully passed the final assessment for this course. Great job! You can now return to the dashboard or review the course materials."
-                : "The passing score for this assessment is 90%. Please review the modules and try again."}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 pt-6">
-            {finalScore < 90 ? (
-              <button
-                onClick={() => { setSubmitted(false); setAnswers({}); }}
-                className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all active:scale-95"
-              >
-                <RefreshCcw size={18} /> Re-attempt Assessment
-              </button>
-            ) : (
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="flex items-center justify-center gap-2 w-full bg-[#662D91] text-white py-4 rounded-2xl font-bold hover:bg-[#522475] transition-all active:scale-95 shadow-lg shadow-purple-200"
-              >
-                <Award size={18} /> Return to Dashboard
-              </button>
-            )}
-          </div>
+           <ScoreRing score={finalScore} />
+           <div className="space-y-3">
+             <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+               {finalScore >= 90 ? "Success!" : "Assessment Incomplete"}
+             </h2>
+             <p className="text-sm md:text-base text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+               {finalScore >= 90
+                 ? "You have passed the final assessment. Your completion record has been updated."
+                 : "The passing grade is 90%. Please review the materials and try again."}
+             </p>
+           </div>
+           <div className="flex flex-col gap-3 pt-6">
+             {finalScore < 90 ? (
+               <button onClick={handleReset} className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all active:scale-95">
+                 <RefreshCcw size={18} /> Restart Assessment
+               </button>
+             ) : (
+               <button onClick={() => router.push("/dashboard")} className="flex items-center justify-center gap-2 w-full bg-[#662D91] text-white py-4 rounded-2xl font-bold hover:bg-[#522475] transition-all active:scale-95 shadow-lg shadow-purple-200">
+                 <Award size={18} /> Return to Dashboard
+               </button>
+             )}
+           </div>
         </div>
       ) : (
         <div className="space-y-12 md:space-y-16">
@@ -254,16 +261,14 @@ export default function FinalCourseQuiz({
                 <span className="flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] md:text-xs font-semibold text-slate-400 group-focus-within:bg-[#00ADEF] group-focus-within:text-white transition-colors">
                   {(idx + 1).toString().padStart(2, '0')}
                 </span>
-                <p className="text-lg md:text-xl font-bold text-slate-800 pt-0.5 leading-snug">
-                  {q.question}
-                </p>
+                <p className="text-lg md:text-xl font-bold text-slate-800 pt-0.5 leading-snug">{q.question}</p>
               </div>
               
               <div className="grid gap-2 md:gap-3 pl-0 md:pl-12">
                 {q.options.map((opt: string) => (
                   <button
                     key={opt}
-                    onClick={() => setAnswers({ ...answers, [idx]: opt })}
+                    onClick={() => handleAnswerChange(idx, opt)}
                     className={`p-4 text-left text-sm font-medium rounded-xl md:rounded-2xl border-2 transition-all active:scale-[0.98] ${
                       answers[idx] === opt
                         ? "bg-cyan-50/30 border-[#00ADEF] text-[#00ADEF] font-semibold ring-4 ring-cyan-50/50"
@@ -288,9 +293,6 @@ export default function FinalCourseQuiz({
             >
               Submit Assessment <ChevronRight size={20} />
             </button>
-            <p className="text-center text-[9px] md:text-[11px] text-slate-300 font-medium uppercase mt-8">
-              &copy; 2026 Rebus Holdings
-            </p>
           </div>
         </div>
       )}

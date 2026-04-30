@@ -45,7 +45,7 @@ export default async function DashboardPage() {
     const completedInThisCourse = userProgress?.filter((p: any) => p.lessons?.course_id === course.id).length || 0;
     const progressPercent = totalLessons > 0 ? Math.round((completedInThisCourse / totalLessons) * 100) : 0;
     
-    // NEW logic: Check if any progress exists
+    // Logic: Check if any progress exists
     const hasStarted = completedInThisCourse > 0;
 
     const isFulllyCompleted = course.course_completions && course.course_completions.length > 0 
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
       ...course,
       totalLessons,
       progressPercent,
-      hasStarted, // Added to identify if the button should say "Start"
+      hasStarted, 
       isFulllyCompleted,
       estimatedTime: course.estimated_time || totalLessons * 10,
     };
@@ -67,11 +67,17 @@ export default async function DashboardPage() {
 
   const CourseCard = ({ course }: { course: any }) => (
     <div className="group relative bg-white border border-slate-200 rounded-xl p-5 md:p-6 shadow-sm hover:shadow-md transition-all flex flex-col h-full">
-      {course.is_private && (
+      
+      {/* IMPROVED LOCK LOGIC: Only show lock if private AND not started */}
+      {course.is_private && !course.hasStarted && !course.isFulllyCompleted ? (
         <div className="absolute top-4 right-4 text-slate-400" title="Private Access">
           <Lock size={14} />
         </div>
-      )}
+      ) : course.isFulllyCompleted ? (
+        <div className="absolute top-4 right-4 text-emerald-500">
+          <CheckCircle size={14} />
+        </div>
+      ) : null}
 
       <div className="space-y-4 flex flex-col h-full">
         <div className="flex items-center justify-between">
@@ -91,7 +97,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex-1">
-            <h4 className="text-lg md:text-xl font-bold text-slate-900 group-hover:text-rebus-blue transition-colors leading-tight">
+            <h4 className="text-lg md:text-xl font-bold text-slate-900 group-hover:text-[#00ADEF] transition-colors leading-tight">
             {course.title}
             </h4>
             <p className="mt-2 text-slate-500 text-sm leading-relaxed line-clamp-2">
@@ -102,7 +108,7 @@ export default async function DashboardPage() {
         {!course.isFulllyCompleted && (
           <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mt-2">
             <div
-              className="h-full bg-rebus-blue transition-all duration-700 ease-out" 
+              className="h-full bg-[#00ADEF] transition-all duration-700 ease-out" 
               style={{ width: `${course.progressPercent}%` }}
             />
           </div>
@@ -113,10 +119,9 @@ export default async function DashboardPage() {
           className={`flex items-center justify-center gap-2 w-full py-3 rounded-lg font-bold text-sm transition-all ${
             course.isFulllyCompleted
               ? "bg-slate-50 text-slate-600 hover:bg-slate-100"
-              : "bg-rebus-blue text-white hover:bg-[#0096d1] shadow-sm shadow-rebus-blue/20 active:scale-95"
+              : "bg-[#00ADEF] text-white hover:bg-[#0096d1] shadow-sm shadow-[#00ADEF]/20 active:scale-95"
           }`}
         >
-          {/* UPDATED: Dynamic Button Text */}
           {course.isFulllyCompleted 
             ? "Review Content" 
             : course.hasStarted 
@@ -137,7 +142,7 @@ export default async function DashboardPage() {
           <div className="flex flex-wrap items-center gap-y-2 gap-x-3 text-xs md:text-sm text-slate-500 font-medium">
             <span className="truncate max-w-[150px] md:max-w-none">{user?.email}</span>
             <span className="text-slate-300 hidden sm:inline">•</span>
-            <span className="bg-blue-50 text-rebus-blue px-2 py-0.5 rounded md:bg-transparent md:p-0 md:text-slate-900">
+            <span className="bg-blue-50 text-[#00ADEF] px-2 py-0.5 rounded md:bg-transparent md:p-0 md:text-slate-900">
                 {activeCourses.length} Active
             </span>
             <span className="text-slate-300 hidden sm:inline">•</span>
@@ -149,7 +154,7 @@ export default async function DashboardPage() {
 
       <section className="space-y-6">
         <div className="flex items-center gap-2 text-slate-900">
-          <Activity size={18} className="text-rebus-blue" />
+          <Activity size={18} className="text-[#00ADEF]" />
           <h3 className="font-bold text-base uppercase tracking-wider text-slate-700">
             In-Progress
           </h3>
@@ -158,7 +163,7 @@ export default async function DashboardPage() {
         {activeCourses.length === 0 ? (
           <div className='rounded-2xl border-2 border-dashed border-slate-200 p-8 md:p-16 text-center bg-slate-50/50'>
             <p className="text-slate-400 text-sm font-medium">No active training detected.</p>
-            <Link href="/dashboard/courses" className='text-rebus-blue text-sm font-bold hover:underline mt-2 inline-block'>
+            <Link href="/dashboard/courses" className='text-[#00ADEF] text-sm font-bold hover:underline mt-2 inline-block'>
               Browse Courses →
             </Link>
           </div>
