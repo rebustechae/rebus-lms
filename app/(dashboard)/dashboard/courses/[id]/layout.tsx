@@ -73,7 +73,7 @@ export default async function CourseLayout({
               <Award size={16} className={isAllComplete ? "text-purple-600 animate-bounce" : ""} />
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Final Assessment</span>
-                {!isAllComplete && <span className="text-[8px] font-medium text-slate-400">Locked until completion</span>}
+                {!isAllComplete && <span className="text-[8px] font-medium text-slate-400">Locked until all lessons are completed</span>}
               </div>
               {!isAllComplete && <Lock size={12} className="ml-auto" />}
            </Link>

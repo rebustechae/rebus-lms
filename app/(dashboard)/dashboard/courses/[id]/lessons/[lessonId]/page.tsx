@@ -247,12 +247,12 @@ export default function LessonContentPage({
           <section className="mb-16 space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#00ADEF]/10 rounded-lg text-[#00ADEF]">
+                <div className="p-2 bg-purple-50 rounded-lg text-purple-900">
                   <FileText size={20} />
                 </div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-slate-900">
-                    Required Reading
+                    Learning Material
                   </h3>
                   {readingCompleted && (
                     <span className="bg-emerald-100 text-emerald-700 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase">

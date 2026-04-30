@@ -60,7 +60,9 @@ export function CourseSidebarNav({
                   }`}>
                     Module {module.order_index.toString().padStart(2, '0')}
                   </span>
-                  <p className="text-[10px] font-bold text-slate-700 leading-tight">{module.title}</p>
+                  <p className={`text-[10px] font-bold leading-tight${
+                    isModuleComplete ? "text-emerald-600/70" : "text-slate-700"
+                  }`}>{module.title}</p>
                 </div>
               </div>
               <div className="text-slate-400 group-hover:text-[#00ADEF]">
