@@ -104,6 +104,12 @@ export async function signOut() {
   redirect("/login");
 }
 
+export async function signOutAction() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/admin-login");
+}
+
 export async function resendOTP(email: string) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
