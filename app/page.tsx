@@ -11,7 +11,7 @@ export default async function Index() {
     return redirect("/dashboard");
   }
 
-  // 2. If not logged in, send them to Login by default
-  // They will only click "Register" if they are new
-  return redirect("/login");
+  // 2. If not logged in, send them to Register by default
+  // They will only click "Login" if they have an account
+  return redirect("/register");
 }
