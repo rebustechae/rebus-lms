@@ -36,7 +36,6 @@ export function CourseSidebarNav({
         const isOpen = openModules[module.id];
         const moduleLessons = (module.lessons || []).sort((a: any, b: any) => a.order_index - b.order_index);
         
-        // CHECK: Is the entire module completed?
         const isModuleComplete = moduleLessons.length > 0 && 
           moduleLessons.every((l: any) => completedIds.has(l.id));
 
@@ -44,7 +43,7 @@ export function CourseSidebarNav({
           <div key={module.id} className="space-y-1">
             <button 
               onClick={() => toggleModule(module.id)}
-              className={`w-full flex items-center justify-between px-4 py-3 transition-all rounded-xl group border ${
+              className={`w-full flex items-center justify-between px-4 py-3 transition-all rounded-md group border ${
                 isModuleComplete 
                   ? "bg-emerald-50/50 border-emerald-100" 
                   : "bg-slate-100/50 border-transparent hover:bg-slate-100"
@@ -55,12 +54,12 @@ export function CourseSidebarNav({
                   <CheckCircle2 size={14} className="text-emerald-600" strokeWidth={3} />
                 )}
                 <div className="flex flex-col items-start text-left">
-                  <span className={`text-[9px] font-bold uppercase tracking-widest ${
+                  <span className={`text-[9px] font-medium uppercase tracking-widest ${
                     isModuleComplete ? "text-emerald-600/70" : "text-slate-400"
                   }`}>
                     Module {module.order_index.toString().padStart(2, '0')}
                   </span>
-                  <p className={`text-[10px] font-bold leading-tight${
+                  <p className={`text-[12px] font-semibold leading-tight${
                     isModuleComplete ? "text-emerald-600/70" : "text-slate-700"
                   }`}>{module.title}</p>
                 </div>
@@ -92,7 +91,7 @@ export function CourseSidebarNav({
                     <Link
                       key={lesson.id}
                       href={isUnlocked ? `/dashboard/courses/${courseId}/lessons/${lesson.id}` : "#"}
-                      className={`flex items-center gap-3 p-3 ml-2 rounded-lg transition-all border-l-2 ${
+                      className={`flex items-center gap-3 p-3 ml-2 rounded-sm transition-all border-l-4 ${
                         isActive 
                           ? "bg-white shadow-sm border-[#00ADEF] ring-1 ring-slate-200/50" 
                           : !isUnlocked 

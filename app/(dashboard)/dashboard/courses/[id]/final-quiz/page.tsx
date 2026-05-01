@@ -4,8 +4,9 @@ import { useState, useEffect, use } from "react";
 import { createClient } from "@/utils/supabase/client";
 import confetti from "canvas-confetti";
 import { useRouter } from "next/navigation";
-import { RefreshCcw, Award, ChevronRight, ArrowLeft, Lock, Loader2, Timer } from "lucide-react";
+import { RefreshCcw, Award, ChevronRight, ArrowLeft, Lock, Loader2, Timer, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import CertificateGenerator from "../../../_components/CertificateGenerator";
 
 export default function FinalCourseQuiz({
   params: paramsPromise,
@@ -22,19 +23,23 @@ export default function FinalCourseQuiz({
   const [isLocked, setIsLocked] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
   
-  // --- TIMER STATE ---
+  // --- DYNAMIC TITLE & USER DATA ---
+  const [courseTitle, setCourseTitle] = useState("");
+  const [userMetadata, setUserMetadata] = useState<any>(null);
+
+  const [hasStarted, setHasStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const QUIZ_DURATION = 30 * 60;
 
   const supabase = createClient();
 
-  // 1. Initial Load: Restore answers and sync timer
   useEffect(() => {
     const savedAnswers = sessionStorage.getItem(`quiz_answers_${params.id}`);
     if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
 
     const startTime = sessionStorage.getItem(`quiz_start_time_${params.id}`);
     if (startTime) {
+      setHasStarted(true); 
       const elapsed = Math.floor((Date.now() - parseInt(startTime)) / 1000);
       const remaining = QUIZ_DURATION - elapsed;
       if (remaining <= 0) {
@@ -42,30 +47,28 @@ export default function FinalCourseQuiz({
       } else {
         setTimeLeft(remaining);
       }
-    } else {
-      // First time landing on quiz, set the start timestamp
-      const now = Date.now().toString();
-      sessionStorage.setItem(`quiz_start_time_${params.id}`, now);
-      setTimeLeft(QUIZ_DURATION);
     }
   }, [params.id]);
 
-  // 2. Timer Countdown Logic
-  useEffect(() => {
-    if (timeLeft === null || submitted || isLocked) return;
+  const startQuiz = () => {
+    const now = Date.now().toString();
+    sessionStorage.setItem(`quiz_start_time_${params.id}`, now);
+    setTimeLeft(QUIZ_DURATION);
+    setHasStarted(true);
+  };
 
+  useEffect(() => {
+    if (timeLeft === null || submitted || isLocked || !hasStarted) return;
     if (timeLeft <= 0) {
       alert("Time is up! The quiz will now reset.");
       handleReset();
       return;
     }
-
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev !== null ? prev - 1 : null));
     }, 1000);
-
     return () => clearInterval(timer);
-  }, [timeLeft, submitted, isLocked]);
+  }, [timeLeft, submitted, isLocked, hasStarted]);
 
   const handleReset = () => {
     sessionStorage.removeItem(`quiz_answers_${params.id}`);
@@ -74,7 +77,6 @@ export default function FinalCourseQuiz({
     window.location.reload();
   };
 
-  // 3. Save answers to session storage as they click
   const handleAnswerChange = (idx: number, opt: string) => {
     const newAnswers = { ...answers, [idx]: opt };
     setAnswers(newAnswers);
@@ -87,7 +89,17 @@ export default function FinalCourseQuiz({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return router.push("/");
 
-      // Gatekeeper Check
+      // --- LOGIC: FETCH USER DATA & COURSE TITLE ---
+      setUserMetadata(user.user_metadata);
+
+      const { data: courseData } = await supabase
+        .from("courses")
+        .select("title")
+        .eq("id", params.id)
+        .single();
+      
+      if (courseData) setCourseTitle(courseData.title);
+
       const { count: totalLessons } = await supabase
         .from("lessons")
         .select("*", { count: "exact", head: true })
@@ -107,7 +119,6 @@ export default function FinalCourseQuiz({
         return;
       }
 
-      // Randomize or Restore Question Order
       const sessionKey = `quiz_order_${params.id}`;
       const savedOrder = sessionStorage.getItem(sessionKey);
 
@@ -144,7 +155,6 @@ export default function FinalCourseQuiz({
     setSubmitted(true);
 
     if (scorePercent >= 90) {
-      // Clear session data upon passing
       sessionStorage.removeItem(`quiz_answers_${params.id}`);
       sessionStorage.removeItem(`quiz_start_time_${params.id}`);
       sessionStorage.removeItem(`quiz_order_${params.id}`);
@@ -202,12 +212,56 @@ export default function FinalCourseQuiz({
         <div className="w-20 h-20 bg-purple-50 text-rebus-purple rounded-3xl flex items-center justify-center mx-auto mb-4"><Lock size={40} /></div>
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Assessment Locked</h2>
         <p className="text-slate-500 text-sm leading-relaxed">Please complete all course modules before attempting the final assessment.</p>
-        <button onClick={() => router.push(`/dashboard/courses/${params.id}`)} className="w-full bg-[#00ADEF] text-white py-4 rounded-2xl font-bold hover:bg-[#0096d1] transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-100">
+        <button onClick={() => router.push(`/dashboard/courses/${params.id}`)} className="w-full bg-[#00ADEF] text-white py-4 rounded-md font-bold hover:bg-[#0096d1] transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-100">
           <ArrowLeft size={18} /> Back to Course
         </button>
       </div>
     </div>
   );
+
+  if (!hasStarted && !submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+        <div className="max-w-xl w-full bg-white rounded-[3rem] p-8 md:p-12 shadow-2xl shadow-slate-200 border border-slate-100 space-y-8">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-rebus-purple text-white rounded-2xl flex items-center justify-center mb-2">
+              <AlertCircle size={32} />
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900">Final Assessment</h1>
+            <p className="text-slate-500 text-sm leading-relaxed">
+              You are about to begin the final quiz for this course. Once started, you cannot pause the timer.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 p-5 rounded-md border border-slate-100">
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Duration</p>
+              <p className="text-xl font-semibold text-slate-900">30 Minutes</p>
+            </div>
+            <div className="bg-slate-50 p-5 rounded-md border border-slate-100">
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Passing Score</p>
+              <p className="text-xl font-semibold text-slate-900">90% or higher</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button 
+              onClick={startQuiz}
+              className="w-full py-5 bg-rebus-purple text-white rounded-md font-bold text-lg hover:bg-rebus-purple/90 transition-all shadow-xl shadow-rebus-purple/20 active:scale-95 flex items-center justify-center gap-2"
+            >
+              Start Assessment <ChevronRight size={20} />
+            </button>
+            <Link 
+              href={`/dashboard/courses/${params.id}`}
+              className="w-full py-4 text-slate-400 font-medium text-sm flex items-center justify-center hover:text-rebus-blue transition-colors"
+            >
+              Cancel and go back
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto py-8 md:py-16 px-4 sm:px-6 space-y-10 md:space-y-12">
@@ -219,7 +273,6 @@ export default function FinalCourseQuiz({
           <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight leading-tight">Final Assessment</h1>
         </div>
         
-        {/* TIMER UI */}
         {!submitted && timeLeft !== null && (
           <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-mono font-bold transition-all ${timeLeft < 300 ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse" : "bg-slate-50 border-slate-100 text-slate-600"}`}>
             <Timer size={18} />
@@ -230,28 +283,42 @@ export default function FinalCourseQuiz({
 
       {submitted ? (
         <div className="bg-white border border-slate-200 rounded-[2rem] p-6 md:p-12 shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
-           <ScoreRing score={finalScore} />
-           <div className="space-y-3">
-             <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
-               {finalScore >= 90 ? "Success!" : "Assessment Incomplete"}
-             </h2>
-             <p className="text-sm md:text-base text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
-               {finalScore >= 90
-                 ? "You have passed the final assessment. Your completion record has been updated."
-                 : "The passing grade is 90%. Please review the materials and try again."}
-             </p>
-           </div>
-           <div className="flex flex-col gap-3 pt-6">
-             {finalScore < 90 ? (
-               <button onClick={handleReset} className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-all active:scale-95">
-                 <RefreshCcw size={18} /> Restart Assessment
-               </button>
-             ) : (
-               <button onClick={() => router.push("/dashboard")} className="flex items-center justify-center gap-2 w-full bg-[#662D91] text-white py-4 rounded-2xl font-bold hover:bg-[#522475] transition-all active:scale-95 shadow-lg shadow-purple-200">
-                 <Award size={18} /> Return to Dashboard
-               </button>
-             )}
-           </div>
+            <ScoreRing score={finalScore} />
+            <div className="space-y-3">
+              <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">
+                {finalScore >= 90 ? "Success!" : "Assessment Incomplete"}
+              </h2>
+              <p className="text-sm md:text-base text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+                {finalScore >= 90
+                  ? "You have passed the final assessment. Your completion record has been updated."
+                  : "The passing grade is 90%. Please review the materials and try again."}
+              </p>
+            </div>
+
+            {/* --- LOGIC: DYNAMIC CERTIFICATE GENERATOR --- */}
+            {finalScore >= 90 && (
+              <div className="pt-6 border-t border-slate-50">
+                <CertificateGenerator 
+                  userName={userMetadata?.full_name || "Valued Learner"}
+                  designation={userMetadata?.designation || "Dedicated Professional"}
+                  courseName={courseTitle}
+                  completionDate={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  baseImageUrl="/certificate-template.jpg"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 pt-6">
+              {finalScore < 90 ? (
+                <button onClick={handleReset} className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-4 rounded-md font-bold hover:bg-slate-800 transition-all active:scale-95">
+                  <RefreshCcw size={18} /> Restart Assessment
+                </button>
+              ) : (
+                <button onClick={() => router.push("/dashboard")} className="flex items-center justify-center gap-2 w-full bg-[#662D91] text-white py-4 rounded-md font-bold hover:bg-[#522475] transition-all active:scale-95 shadow-md shadow-purple-200">
+                  <Award size={18} /> Return to Dashboard
+                </button>
+              )}
+            </div>
         </div>
       ) : (
         <div className="space-y-12 md:space-y-16">

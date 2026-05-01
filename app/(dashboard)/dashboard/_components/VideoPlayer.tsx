@@ -122,7 +122,7 @@ export default function VideoPlayer({
       className={`w-full bg-black overflow-hidden shadow-2xl transition-all relative group/container ${
         isFullscreen
           ? "fixed inset-0 z-[9999] rounded-0"
-          : "rounded-xl md:rounded-[2rem] aspect-video"
+          : "rounded-xl md:rounded-xl aspect-video"
       }`}
       style={
         {

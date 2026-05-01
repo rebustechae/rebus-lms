@@ -6,13 +6,32 @@ import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { LogOut, PanelLeftClose, PanelLeftOpen, Menu, X } from "lucide-react"
+import { LogOut, PanelLeftClose, PanelLeftOpen, Menu, X, User } from "lucide-react"
+import { createClient } from "@/utils/supabase/client"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userData, setUserData] = useState<{ name: string; email: string; avatar?: string } | null>(null);
   
+  const supabase = createClient();
+
+  // Fetch user data for the avatar section
+  useEffect(() => {
+    async function getUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserData({
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || "User",
+          email: user.email || "",
+          avatar: user.user_metadata?.avatar_url
+        });
+      }
+    }
+    getUser();
+  }, []);
+
   // Auto-close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -27,9 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans overflow-x-hidden">
       
-      {/* --- MOBILE HEADER --- 
-          Logo on Left, Hamburger on Right
-      */}
+      {/* --- MOBILE HEADER --- */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-50">
         <Link href='/dashboard'>
           <Image src="/header.svg" alt="Logo" width={100} height={32} className="object-contain" />
@@ -50,10 +67,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {/* --- SIDEBAR --- 
-          Desktop: Anchored Left (sticky)
-          Mobile: Anchored Right (fixed) + Slide from Right
-      */}
+      {/* --- SIDEBAR --- */}
       <aside 
         className={`
           fixed lg:sticky top-0 h-screen bg-white border-slate-200 flex flex-col transition-all duration-300 ease-in-out z-[70]
@@ -69,7 +83,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         `}>
           <div className={`flex items-center w-full px-6 ${isCollapsed ? "flex-col gap-6" : "justify-between"}`}>
             
-            {/* Logo: Always at top when collapsed */}
             <Link href='/dashboard' className="order-1">
               <Image 
                 src={isCollapsed ? "/favicon.ico" : "/header.svg"} 
@@ -80,7 +93,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               />
             </Link>
 
-            {/* Desktop Toggles: Positioned below logo when collapsed */}
             <div className="order-2">
               {!isCollapsed ? (
                 <button
@@ -99,7 +111,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
 
-            {/* Mobile Close Button: Top-Right of sidebar */}
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
               className="lg:hidden p-2 text-slate-400 hover:bg-slate-50 rounded-xl"
@@ -110,7 +121,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         {/* Navigation Links */}
-        <div className="flex-1 py-6 overflow-y-auto overflow-x-hidden">
+        <div className="flex-1 py-4 overflow-y-auto overflow-x-hidden">
+          
+          {/* USER AVATAR SECTION */}
+          <div className={`px-4 mb-4 transition-all duration-300 ${isCollapsed && !isMobileMenuOpen ? "opacity-100" : "opacity-100"}`}>
+            <Link 
+              href="/dashboard/profile"
+              className={`flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 transition-all group ${
+                isCollapsed && !isMobileMenuOpen ? "justify-center" : ""
+              }`}
+            >
+              <div className="relative flex-shrink-0">
+                {userData?.avatar ? (
+                  <Image 
+                    src={userData.avatar} 
+                    alt="Avatar" 
+                    width={40} 
+                    height={40} 
+                    className="rounded-full border-2 border-white shadow-sm object-cover" 
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-[#00ADEF]/10 border-2 border-white shadow-sm flex items-center justify-center text-[#00ADEF]">
+                    <User size={20} />
+                  </div>
+                )}
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+              </div>
+
+              {(isMobileMenuOpen || !isCollapsed) && (
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-bold text-slate-900 truncate">
+                    {userData?.name}
+                  </span>
+                  <span className="text-[10px] font-medium text-slate-400 truncate uppercase tracking-wider">
+                    View Profile
+                  </span>
+                </div>
+              )}
+            </Link>
+          </div>
+
+          <div className="h-px bg-slate-50 mx-6 mb-4" />
+
           <SidebarNav isCollapsed={isCollapsed && !isMobileMenuOpen} />
         </div>
 

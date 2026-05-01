@@ -32,7 +32,7 @@ export default function SidebarNav({ isCollapsed }: SidebarNavProps) {
           <Link
             key={item.href}
             href={item.href}
-            className={`group relative flex items-center py-2.5 rounded-xl transition-all duration-200
+            className={`group relative flex items-center py-2.5 rounded-md transition-all duration-200
               ${isCollapsed ? "justify-center px-0" : "px-4"}
               ${active ? "bg-slate-100 text-slate-900 shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}
             `}

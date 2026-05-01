@@ -228,7 +228,7 @@ export default function LessonContentPage({
           {lesson.format === "video" && lesson.video_url && (
             <div
               ref={videoSectionRef}
-              className="rounded-xl overflow-hidden shadow-2xl bg-black scroll-mt-24 mb-12"
+              className="rounded-xl overflow-hidden shadow-2xl bg-none scroll-mt-24 mb-12"
             >
               <VideoPlayer
                 videoUrl={lesson.video_url}
@@ -308,7 +308,7 @@ export default function LessonContentPage({
                     : `/dashboard/courses/${params.id}/final-quiz`,
                 );
               }}
-              className={`w-full py-6 rounded-2xl font-semibold transition-all flex items-center justify-center gap-3 text-white
+              className={`w-full py-6 rounded-md font-semibold transition-all flex items-center justify-center gap-3 text-white
                 ${
                   canContinue
                     ? nextLessonId

@@ -28,16 +28,8 @@ export default async function CourseLayout({
   const isAllComplete = completedIds.size === totalLessons && totalLessons > 0;
 
   return (
-    // Changed: ensured h-screen is only forced on md+ to prevent mobile overlap
     <div className="flex flex-col md:flex-row min-h-screen bg-white">
-      
-      {/* SIDEBAR CHANGES:
-          1. Removed 'sticky top-0' from mobile (it causes the overlap you see).
-          2. Added 'md:sticky md:top-0' so it only sticks on desktop.
-          3. Added 'h-fit' for mobile so it grows with content, and 'md:h-screen' for desktop.
-      */}
       <aside className="w-full md:w-80 border-r border-slate-100 flex flex-col h-fit md:h-screen md:sticky md:top-0 bg-slate-50/30 z-20">
-        
         <div className="p-6 border-b border-slate-100 bg-white">
           <Link 
             href="/dashboard" 
@@ -47,7 +39,7 @@ export default async function CourseLayout({
             Back to Courses
           </Link>
           
-          <h3 className="font-semibold text-slate-900 text-sm uppercase mb-1 tracking-tighter">
+          <h3 className="font-bold text-slate-500 text-sm uppercase mb-1 tracking-tighter">
             Course Syllabus
           </h3>
           <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -74,13 +66,13 @@ export default async function CourseLayout({
         <div className="p-4 border-t border-slate-100 bg-white">
            <Link
               href={isAllComplete ? `/dashboard/courses/${id}/final-quiz` : "#"}
-              className={`flex items-center gap-3 p-4 rounded-xl transition-all border ${
+              className={`flex items-center gap-3 p-4 rounded-md transition-all border ${
                   isAllComplete 
-                  ? "bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100" 
+                  ? "bg-[#662D91] border-[#662D91] text-white hover:bg-[#55247a]" 
                   : "opacity-40 cursor-not-allowed bg-slate-50 border-transparent text-slate-400"
               }`}
            >
-              <Award size={16} className={isAllComplete ? "text-purple-600" : ""} />
+              <Award size={16} className={isAllComplete ? "text-white" : ""} />
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-wider">Final Assessment</span>
                 {!isAllComplete && <span className="text-[8px] font-medium text-slate-400">Locked until all lessons are completed</span>}
