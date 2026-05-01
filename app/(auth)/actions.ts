@@ -24,16 +24,24 @@ export async function signInWithOTP(prevState: any, formData: FormData) {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      // Prevents "shadow" accounts without names/designations
-      shouldCreateUser: false,
+      shouldCreateUser: false, // Prevents account creation here
     },
   });
 
   if (error) {
-    // If the error indicates the user doesn't exist, give a helpful message
-    if (error.message.includes("Signups are disabled")) {
-      return { error: "Account not found. Please register to create your profile." };
+    // Supabase returns "Signups not allowed for otp" when shouldCreateUser is false
+    // and the email doesn't exist in the auth.users table.
+    const isUserNotFound =
+      error.message.toLowerCase().includes("signups not allowed") ||
+      error.message.toLowerCase().includes("signup disabled");
+
+    if (isUserNotFound) {
+      return {
+        error:
+          "Account not found. Please register to create your professional profile first.",
+      };
     }
+
     return { error: error.message };
   }
 
@@ -135,7 +143,7 @@ export async function resendOTP(email: string) {
       shouldCreateUser: false,
     },
   });
-  
+
   if (error) return { error: error.message };
   return { success: true };
 }
