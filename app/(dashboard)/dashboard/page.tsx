@@ -298,7 +298,7 @@ export default async function DashboardPage() {
 
       <footer className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
         <p className="text-[10px] font-semibold text-slate-300 tracking-wide uppercase">
-          © 2026 REBUS HOLDINGS • INTERNAL LEARNING MANAGEMENT
+          © 2026 REBUS HOLDINGS 
         </p>
       </footer>
     </div>
