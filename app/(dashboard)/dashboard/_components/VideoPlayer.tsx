@@ -66,7 +66,6 @@ export default function VideoPlayer({
         await document.exitFullscreen();
       }
     } catch (err) {
-      console.error("Fullscreen error", err);
     }
   };
 

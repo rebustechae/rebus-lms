@@ -46,9 +46,7 @@ function VerifyForm() {
   async function handleVerify() {
     setIsLoading(true);
     setError(null);
-    
-    // DEBUG: Just to show you it's sending the code to your backend logic
-    console.log(`Attempting verification for ${email} with code ${code}...`);
+
 
     try {
       // This calls the logic we "injected" into your actions file

@@ -13,10 +13,9 @@ export default async function AdminPage() {
 
   // 1. SESSION CHECK
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError) console.error("AUTH ERROR:", authError.message);
+  if (authError) 
 
   if (!user) {
-    console.log("REDIRECTING: No session, sending to /admin-login");
     redirect("/admin-login");
   }
 

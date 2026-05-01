@@ -21,7 +21,6 @@ export default async function AdminGroupLayout({
 
   // 3. Final Admin Gate
   if (!profile || profile.role !== "admin") {
-    console.log("Access Denied: Not an admin");
     redirect("/admin-login");
   }
 

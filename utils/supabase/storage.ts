@@ -33,7 +33,6 @@ export async function uploadFile(
     // download=false prevents the browser from trying to download the VTT file
     return `${publicUrl}?download=false`;
   } catch (error) {
-    console.error("Upload error:", error);
     return null;
   }
 }

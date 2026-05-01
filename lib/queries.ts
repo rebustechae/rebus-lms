@@ -35,12 +35,6 @@ export async function getModulesWithLessonsForCourse(courseId: string) {
     .order("order_index", { ascending: true });
 
   if (error) {
-    console.error("Error fetching modules with lessons:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    });
     // Fallback: return empty array but don't crash
     return [];
   }
@@ -66,12 +60,7 @@ export async function getLessonsForCourse(courseId: string) {
     .order("order_index", { ascending: true });
 
   if (error) {
-    console.error("Error fetching lessons:", {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code
-    });
+    
     return [];
   }
 
@@ -95,7 +84,6 @@ export async function getUserProgressForCourse(
     .eq("course_id", courseId);
 
   if (error) {
-    console.error("Error fetching progress:", error);
     return [];
   }
 
@@ -115,7 +103,6 @@ export async function getUserProgressSummary(userId: string) {
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error fetching progress summary:", error);
     return [];
   }
 
@@ -152,7 +139,6 @@ export async function getPaginatedUsers(
     .returns<any[]>();
 
   if (error) {
-    console.error("Error fetching paginated users:", error);
     return { users: [], total: 0, page, pageSize };
   }
 
@@ -185,7 +171,6 @@ export async function getUserCourseProgress(userId: string) {
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error fetching user course progress:", error);
     return [];
   }
 
@@ -210,7 +195,6 @@ export async function isLessonCompleted(
     .maybeSingle();
 
   if (error) {
-    console.error("Error checking lesson completion:", error);
     return false;
   }
 
@@ -277,7 +261,6 @@ export async function getBatchLessonCompletionStatus(
     .in("lesson_id", lessonIds);
 
   if (error) {
-    console.error("Error fetching batch completion status:", error);
     return new Set<string>();
   }
 
@@ -308,7 +291,6 @@ export async function getCoursesWithUserStats(
     .range(offset, offset + pageSize - 1);
 
   if (error) {
-    console.error("Error fetching courses:", error);
     return { courses: [], total: 0 };
   }
 

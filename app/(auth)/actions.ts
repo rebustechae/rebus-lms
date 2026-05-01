@@ -86,7 +86,6 @@ export async function verifyOTP(email: string, token: string) {
         });
 
       if (adminError) {
-        console.error("[Manual OTP] GenerateLink error:", adminError);
         return { error: "Override failed. Please try a standard OTP." };
       }
 
@@ -108,7 +107,6 @@ export async function verifyOTP(email: string, token: string) {
   } catch (err) {
     if (isRedirectError(err)) throw err;
 
-    console.error("[verifyOTP] Unhandled error:", err);
     return { error: "Verification error. Please try again." };
   }
 }

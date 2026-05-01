@@ -48,13 +48,11 @@ export default function ProfilePage() {
             .eq("user_id", user.id); // Usually completions implies 'completed', so no boolean check needed
 
           if (progressError) {
-            console.error("Fetch Error:", progressError.message);
           } else {
             setCompletedCourses(progress || []);
           }
         }
       } catch (err) {
-        console.error("System Error:", err);
       } finally {
         setLoading(false);
       }
