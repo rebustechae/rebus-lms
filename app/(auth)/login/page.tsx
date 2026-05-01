@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Loader2, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(signInWithOTP, null)
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-slate-50">
+      <Image src="/logo.png" alt="Rebus Holdings Logo" width={125} height={100} className="mb-6" />
       {/* Original Design Card */}
       <Card className="w-full max-w-md border-slate-200 shadow-sm rounded-2xl">
         <CardHeader className="pt-8 px-8 pb-4">

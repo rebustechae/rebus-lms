@@ -5,7 +5,8 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 // 1. Separate the Link component from the Lucide icons
 import { User, Briefcase, Mail, ArrowRight, Loader2 } from "lucide-react";
-import Link from "next/link"; 
+import Link from "next/link";
+import Image from "next/image";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -31,9 +32,9 @@ export default function RegisterPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: formData.email,
       options: {
-        // 2. CRITICAL: On the register page, we set this to true 
+        // 2. CRITICAL: On the register page, we set this to true
         // to override the "shouldCreateUser: false" in your login action.
-        shouldCreateUser: true, 
+        shouldCreateUser: true,
         data: {
           full_name: formData.fullName,
           designation: formData.designation,
@@ -52,6 +53,15 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 shadow-xl border border-slate-100 space-y-8">
+        <div className="flex justify-center w-full">
+          <Image
+            src="/logo.png"
+            alt="Rebus Holdings Logo"
+            width={125}
+            height={100}
+            className="mb-2" // Reduced bottom margin slightly for better balance
+          />
+        </div>
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             Create Account
