@@ -73,7 +73,7 @@ export default async function CourseCatalogPage() {
           return (
             <div 
               key={course.id}
-              className="group relative bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              className="group relative bg-white border border-slate-200 rounded-md p-5 md:p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
             >
               {isCompleted && (
                 <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-green-500 rounded-full p-1 shadow-lg shadow-green-200 animate-in zoom-in duration-300">
@@ -138,7 +138,7 @@ export default async function CourseCatalogPage() {
       </div>
 
       {visibleCourses.length === 0 && (
-        <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 md:p-20 text-center bg-slate-50/50">
+        <div className="rounded-md border-2 border-dashed border-slate-200 p-12 md:p-20 text-center bg-slate-50/50">
           <p className="text-sm md:text-base text-slate-400 font-semibold uppercase tracking-widest">
             No authorized courses available.
           </p>
