@@ -1,0 +1,15 @@
+name = "rebus-lms"
+main = ".open-next/worker.js"
+
+compatibility_date = "2024-05-01"
+
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "prod-db"
+database_id = "199b98b9-63fb-40a5-bf1e-5bfd8b8bd672"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "your-media-bucket"

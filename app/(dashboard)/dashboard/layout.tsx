@@ -63,7 +63,6 @@ export default function DashboardLayout({
   }
 
   return (
-    // FIX 1: Ensure the outer container is exactly the viewport height and prevents weird horizontal shifts
     <div className="flex h-screen w-screen bg-slate-50 font-sans overflow-hidden">
       {/* --- MOBILE HEADER --- */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-50">
@@ -147,7 +146,7 @@ export default function DashboardLayout({
             <Link
               href="/dashboard/profile"
               className={`flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 transition-all ${
-                isCollapsed ? "justify-center px-0" : ""
+                isCollapsed ? "justify-center" : ""
               }`}
             >
               <div className="relative flex-shrink-0">
