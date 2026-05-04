@@ -22,18 +22,34 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Domain validation to match your actions.ts logic
+    // 1. Domain Validation
     if (!formData.email.toLowerCase().endsWith("@rebus.ae")) {
       alert("Access restricted to company employees (@rebus.ae) only.");
       setLoading(false);
       return;
     }
 
+    // 2. CHECK IF USER EXISTS
+    // We check your 'profiles' table for the email
+    const { data: existingUser, error: checkError } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("email", formData.email.toLowerCase())
+      .single();
+
+    if (existingUser) {
+      alert(
+        "An account with this email already exists. Please log in instead.",
+      );
+      setLoading(false);
+      router.push("/login"); // Redirect them to login
+      return;
+    }
+
+    // 3. Proceed with Registration if they don't exist
     const { error } = await supabase.auth.signInWithOtp({
       email: formData.email,
       options: {
-        // 2. CRITICAL: On the register page, we set this to true
-        // to override the "shouldCreateUser: false" in your login action.
         shouldCreateUser: true,
         data: {
           full_name: formData.fullName,

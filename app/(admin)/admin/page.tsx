@@ -1,6 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { Plus, Users, Layers, BarChart3, Settings2, ShieldCheck, Edit } from "lucide-react";
+import {
+  Plus,
+  Users,
+  Layers,
+  BarChart3,
+  Settings2,
+  ShieldCheck,
+  Edit,
+} from "lucide-react";
 import Link from "next/link";
 import DeleteCourseButton from "./_components/DeleteCourseButton";
 
@@ -8,12 +16,14 @@ import DeleteCourseButton from "./_components/DeleteCourseButton";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  
   const supabase = await createClient();
 
   // 1. SESSION CHECK
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
   // If there's an error or no user, stop and redirect
   if (authError || !user) {
     redirect("/admin-login");
@@ -21,21 +31,29 @@ export default async function AdminPage() {
 
   // 2. DATA FETCHING
   const [coursesRes, progressRes, certsRes] = await Promise.all([
-    supabase.from("courses").select(`*, course_completions(count), lessons(id)`).order("created_at", { ascending: false }),
+    supabase
+      .from("courses")
+      .select(`*, course_completions(count), lessons(id)`)
+      .order("created_at", { ascending: false }),
     supabase.from("user_progress").select("user_id"),
-    supabase.from("course_completions").select("*", { count: 'exact', head: true }).eq("passed", true)
+    supabase
+      .from("course_completions")
+      .select("*", { count: "exact", head: true })
+      .eq("passed", true),
   ]);
 
   const courses = coursesRes.data || [];
   const globalProgress = progressRes.data || [];
   const totalCertifications = certsRes.count || 0;
-  const uniqueStudentCount = new Set(globalProgress.map(u => u.user_id)).size;
+  const uniqueStudentCount = new Set(globalProgress.map((u) => u.user_id)).size;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-8">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Executive Overview</h2>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
+            Executive Overview
+          </h2>
           <p className="text-slate-500 text-sm mt-1 font-medium italic">
             Connected as: <span className="text-[#00ADEF]">{user?.email}</span>
           </p>
@@ -50,17 +68,39 @@ export default async function AdminPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: "Active Courses", val: courses.length, icon: <Layers className="text-[#00ADEF]" />, bg: "bg-blue-50" },
-          { label: "Certifications", val: totalCertifications, icon: <ShieldCheck className="text-purple-600" />, bg: "bg-purple-50" },
-          { label: "Active Users", val: uniqueStudentCount, icon: <Users className="text-slate-600" />, bg: "bg-slate-100" }
+          {
+            label: "Active Courses",
+            val: courses.length,
+            icon: <Layers className="text-[#00ADEF]" />,
+            bg: "bg-blue-50",
+          },
+          {
+            label: "Certifications",
+            val: totalCertifications,
+            icon: <ShieldCheck className="text-purple-600" />,
+            bg: "bg-purple-50",
+          },
+          {
+            label: "Registered Users",
+            val: uniqueStudentCount,
+            icon: <Users className="text-slate-600" />,
+            bg: "bg-slate-100",
+          },
         ].map((kpi, i) => (
-          <div key={i} className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
+          <div
+            key={i}
+            className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm"
+          >
             <div className="flex items-center justify-between mb-4">
               <div className={`p-2.5 rounded-lg ${kpi.bg}`}>{kpi.icon}</div>
               <BarChart3 size={16} className="text-slate-300" />
             </div>
-            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{kpi.label}</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">{kpi.val.toLocaleString()}</p>
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">
+              {kpi.label}
+            </p>
+            <p className="text-3xl font-bold text-slate-900 mt-1">
+              {kpi.val.toLocaleString()}
+            </p>
           </div>
         ))}
       </div>
@@ -71,7 +111,9 @@ export default async function AdminPage() {
         </div>
         <div className="overflow-x-auto">
           {courses.length === 0 ? (
-            <div className="p-20 text-center text-slate-400 font-medium italic">No courses found.</div>
+            <div className="p-20 text-center text-slate-400 font-medium italic">
+              No courses found.
+            </div>
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
@@ -83,20 +125,42 @@ export default async function AdminPage() {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {courses.map((course: any) => (
-                  <tr key={course.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr
+                    key={course.id}
+                    className="hover:bg-slate-50/50 transition-colors"
+                  >
                     <td className="px-6 py-5">
-                      <Link href={`/admin/courses/${course.id}`} className="font-bold text-slate-900 hover:text-[#00ADEF]">
+                      <Link
+                        href={`/admin/courses/${course.id}`}
+                        className="font-bold text-slate-900 hover:text-[#00ADEF]"
+                      >
                         {course.title}
                       </Link>
                     </td>
                     <td className="px-6 py-5">
-                       <span className="text-[10px] font-bold px-2 py-1 bg-emerald-50 text-emerald-700 rounded-full">
-                         {course.course_completions?.[0]?.count || 0} PASS
-                       </span>
+                      <Link
+                        href={`/admin/courses/${course.id}/results`}
+                        className="inline-flex items-center gap-2 group cursor-pointer"
+                      >
+                        <span className="text-[10px] font-bold px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                          {course.course_completions?.[0]?.count || 0} PASS
+                        </span>
+                        <span className="text-slate-300 group-hover:text-[#00ADEF] transition-colors">
+                          <BarChart3 size={14} />
+                        </span>
+                      </Link>
                     </td>
                     <td className="px-6 py-5 text-right flex justify-end gap-2">
-                       <Link href={`/admin/courses/${course.id}`} className="p-2 hover:bg-slate-100 rounded-lg"><Edit size={18} /></Link>
-                       <DeleteCourseButton courseId={course.id} courseTitle={course.title} />
+                      <Link
+                        href={`/admin/courses/${course.id}`}
+                        className="p-2 hover:bg-slate-100 rounded-lg"
+                      >
+                        <Edit size={18} />
+                      </Link>
+                      <DeleteCourseButton
+                        courseId={course.id}
+                        courseTitle={course.title}
+                      />
                     </td>
                   </tr>
                 ))}

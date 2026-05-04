@@ -132,7 +132,7 @@ function VerifyForm() {
         <div className="w-full space-y-4">
           <Button
             onClick={handleVerify}
-            className="w-full bg-[#00ADEF] hover:bg-[#00ADEF]/80 text-white py-7 rounded-xl font-semibold uppercase text-xs transition-all shadow-xl shadow-slate-200"
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-7 rounded-xl font-semibold uppercase text-xs transition-all shadow-xl shadow-slate-200"
             disabled={code.length !== 6 || isLoading}
           >
             {isLoading ? (

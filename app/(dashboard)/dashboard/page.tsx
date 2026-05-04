@@ -285,7 +285,7 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-3 px-2">
             <div className="w-1.5 h-6 bg-emerald-500" />
             <h3 className="font-bold text-lg uppercase tracking-wider text-slate-800">
-              Achievements
+              Completed Courses
             </h3>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 opacity-85 hover:opacity-100 transition-opacity">
