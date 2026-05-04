@@ -92,15 +92,6 @@ export default async function DashboardPage() {
 
   // KPI Calculations
   const totalLessonsCompleted = userProgress?.length || 0;
-  const averageProgress =
-    processedCourses.length > 0
-      ? Math.round(
-          processedCourses.reduce(
-            (acc, curr) => acc + curr.progressPercent,
-            0,
-          ) / processedCourses.length,
-        )
-      : 0;
 
   const CourseCard = ({ course }: { course: any }) => (
     <div className="group relative bg-white border border-slate-200 rounded-md p-6 shadow-sm hover:shadow-xl hover:border-[#00ADEF]/30 transition-all duration-300 flex flex-col h-full">
@@ -200,7 +191,7 @@ export default async function DashboardPage() {
       </header>
 
       {/* --- KPI STATS ROW --- */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
         <div className="bg-white border border-slate-100 p-6 rounded-md shadow-sm flex items-center gap-5">
           <div className="w-12 h-12 rounded-sm bg-blue-50 flex items-center justify-center text-[#00ADEF]">
             <BookOpen size={24} />
@@ -225,20 +216,6 @@ export default async function DashboardPage() {
             </p>
             <p className="text-2xl font-bold text-slate-900">
               {completedCourses.length}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-100 p-6 rounded-md shadow-sm flex items-center gap-5">
-          <div className="w-12 h-12 rounded-sm bg-orange-50 flex items-center justify-center text-orange-500">
-            <Flame size={24} />
-          </div>
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-              Avg. Progress
-            </p>
-            <p className="text-2xl font-bold text-slate-900">
-              {averageProgress}%
             </p>
           </div>
         </div>
