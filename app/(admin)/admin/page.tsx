@@ -13,9 +13,9 @@ export default async function AdminPage() {
 
   // 1. SESSION CHECK
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError) 
-
-  if (!user) {
+  
+  // If there's an error or no user, stop and redirect
+  if (authError || !user) {
     redirect("/admin-login");
   }
 
@@ -37,7 +37,7 @@ export default async function AdminPage() {
         <div>
           <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Executive Overview</h2>
           <p className="text-slate-500 text-sm mt-1 font-medium italic">
-            Connected as: <span className="text-[#00ADEF]">{user.email}</span>
+            Connected as: <span className="text-[#00ADEF]">{user?.email}</span>
           </p>
         </div>
         <Link
