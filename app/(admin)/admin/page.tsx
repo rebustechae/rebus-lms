@@ -5,14 +5,13 @@ import {
   Users,
   Layers,
   BarChart3,
-  Settings2,
   ShieldCheck,
   Edit,
+  Activity, // Added for new KPI
 } from "lucide-react";
 import Link from "next/link";
 import DeleteCourseButton from "./_components/DeleteCourseButton";
 
-// CRITICAL: Tells Next.js to NEVER cache this page
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
@@ -24,13 +23,13 @@ export default async function AdminPage() {
     error: authError,
   } = await supabase.auth.getUser();
 
-  // If there's an error or no user, stop and redirect
   if (authError || !user) {
     redirect("/admin-login");
   }
 
   // 2. DATA FETCHING
-  const [coursesRes, progressRes, certsRes] = await Promise.all([
+  // Added 'profiles' to the fetch to get the actual registered user count
+  const [coursesRes, progressRes, certsRes, profilesRes] = await Promise.all([
     supabase
       .from("courses")
       .select(`*, course_completions(count), lessons(id)`)
@@ -40,12 +39,20 @@ export default async function AdminPage() {
       .from("course_completions")
       .select("*", { count: "exact", head: true })
       .eq("passed", true),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true }),
   ]);
 
   const courses = coursesRes.data || [];
   const globalProgress = progressRes.data || [];
   const totalCertifications = certsRes.count || 0;
-  const uniqueStudentCount = new Set(globalProgress.map((u) => u.user_id)).size;
+  
+  // FIX: Dashboard now reflects total profiles (matches Manage Users table)
+  const totalRegisteredUsers = profilesRes.count || 0;
+  
+  // OPTIONAL: Keep track of "Active Learners" (those who actually started a lesson)
+  const activeLearnersCount = new Set(globalProgress.map((u) => u.user_id)).size;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -58,15 +65,23 @@ export default async function AdminPage() {
             Connected as: <span className="text-[#00ADEF]">{user?.email}</span>
           </p>
         </div>
-        <Link
-          href="/admin/courses/new"
-          className="bg-[#00ADEF] hover:bg-[#0096d1] text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 shadow-sm"
-        >
-          <Plus size={18} /> New Course
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/admin/users" // Assuming this is your Manage Users path
+            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 shadow-sm"
+          >
+            <Users size={18} /> Manage Users
+          </Link>
+          <Link
+            href="/admin/courses/new"
+            className="bg-[#00ADEF] hover:bg-[#0096d1] text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 shadow-sm"
+          >
+            <Plus size={18} /> New Course
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6"> {/* Changed to 4 columns to include Activity */}
         {[
           {
             label: "Active Courses",
@@ -82,9 +97,15 @@ export default async function AdminPage() {
           },
           {
             label: "Registered Users",
-            val: uniqueStudentCount,
+            val: totalRegisteredUsers, // Now matches Manage Users exactly
             icon: <Users className="text-slate-600" />,
             bg: "bg-slate-100",
+          },
+          {
+            label: "Active Learners",
+            val: activeLearnersCount, // Insight into how many are actually studying
+            icon: <Activity className="text-emerald-600" />,
+            bg: "bg-emerald-50",
           },
         ].map((kpi, i) => (
           <div
@@ -105,6 +126,7 @@ export default async function AdminPage() {
         ))}
       </div>
 
+      {/* ... rest of your course table code ... */}
       <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50">
           <h3 className="font-semibold text-slate-800 text-sm">Courses</h3>
