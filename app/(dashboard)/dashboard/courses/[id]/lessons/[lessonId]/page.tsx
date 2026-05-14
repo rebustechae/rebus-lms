@@ -211,9 +211,9 @@ export default function LessonContentPage({
           {/* LOGO IN TOP RIGHT */}
           <div className="absolute top-0 right-0">
             <img
-              src="/logo.png"
+              src="/header.png"
               alt="Rebus Holdings Logo"
-              className="h-10 md:h-12 w-auto opacity-80 hover:opacity-100 transition-opacity"
+              className="h-12 md:h-36 w-auto opacity-80 hover:opacity-100 transition-opacity"
             />
           </div>
 

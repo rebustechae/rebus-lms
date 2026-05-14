@@ -69,7 +69,7 @@ export default function DashboardLayout({
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-50">
         <Link href="/dashboard">
           <Image
-            src="/header.svg"
+            src="/header.png"
             alt="Logo"
             width={100}
             height={32}
@@ -116,9 +116,9 @@ export default function DashboardLayout({
           >
             <Link href="/dashboard" className="flex-shrink-0">
               <Image
-                src={isCollapsed ? "/favicon.ico" : "/header.svg"}
+                src={isCollapsed ? "/favicon.ico" : "/header.png"}
                 alt="Logo"
-                width={isCollapsed ? 32 : 120}
+                width={isCollapsed ? 32 : 96}
                 height={40}
                 className="object-contain"
               />
