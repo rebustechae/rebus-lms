@@ -1,25 +1,23 @@
-'use client'
+"use client";
 
-import { Trash2, Award, MoreVertical, Loader2 } from "lucide-react";
+import { Trash2, MoreVertical, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { updateRole, deleteUser } from "./actions";
 import CourseProgressTooltip from "../_components/CourseProgressTooltip";
 
-export default function UserRow({ 
+export default function UserRow({
   user,
   courseProgress,
   courseLessonsMap,
-}: {  
+}: {
   user: any;
   courseProgress?: any[];
   courseLessonsMap?: Record<string, string[]>;
 }) {
   const [isUpdating, setIsUpdating] = useState(false);
-
-  // FIX: Look at direct properties first (profiles table), then fallback to metadata
   const fullName = user.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Unknown";
   const designation = user.designation || user.user_metadata?.designation || "Personnel";
-  const completionCount = user.course_completions?.[0]?.count ?? 0;
+  const userRole = user.role || "student";
 
   const handleRoleChange = async (newRole: string) => {
     setIsUpdating(true);
@@ -39,10 +37,13 @@ export default function UserRow({
   };
 
   const getRoleStyles = (role: string) => {
-    switch(role) {
-      case 'admin': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'manager': return 'bg-amber-50 text-amber-700 border-amber-200';
-      default: return 'bg-slate-50 text-slate-700 border-slate-200';
+    switch (role) {
+      case "admin":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      case "manager":
+        return "bg-amber-50 text-amber-700 border-amber-200";
+      default:
+        return "bg-slate-50 text-slate-700 border-slate-200";
     }
   };
 
@@ -54,45 +55,49 @@ export default function UserRow({
             {fullName[0].toUpperCase()}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-bold text-slate-900 text-sm truncate">{fullName}</span>
+            <span className="font-bold text-slate-900 text-sm truncate">
+              {fullName}
+            </span>
             <div className="flex items-center gap-1.5">
-               <span className="text-[10px] font-bold text-[#00ADEF] uppercase tracking-wider truncate">
-                 {designation}
-               </span>
-               <span className="text-slate-300">•</span>
-               <span className="text-[10px] text-slate-400 font-medium truncate">{user.email}</span>
+              <span className="text-[10px] font-bold text-[#00ADEF] uppercase tracking-wider truncate">
+                {designation}
+              </span>
+              <span className="text-slate-300">•</span>
+              <span className="text-[10px] text-slate-400 font-medium truncate">
+                {user.email}
+              </span>
             </div>
           </div>
         </div>
       </td>
-      
+
       <td className="px-6 py-4">
         <div className="relative inline-block">
-          <select 
+          <select
             disabled={isUpdating}
-            defaultValue={user.role}
+            defaultValue={userRole}
             onChange={(e) => handleRoleChange(e.target.value)}
-            className={`appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-widest outline-none transition-all cursor-pointer disabled:opacity-50 ${getRoleStyles(user.role)}`}
+            className={`appearance-none pl-3 pr-8 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-widest outline-none transition-all cursor-pointer disabled:opacity-50 ${getRoleStyles(userRole)}`}
           >
             <option value="student">Student</option>
             <option value="manager">Manager</option>
             <option value="admin">Admin</option>
           </select>
           <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-            {isUpdating ? <Loader2 size={10} className="animate-spin" /> : <MoreVertical size={10} />}
+            {isUpdating ? (
+              <Loader2 size={10} className="animate-spin" />
+            ) : (
+              <MoreVertical size={10} />
+            )}
           </div>
         </div>
       </td>
 
       <td className="px-6 py-4">
         <div className="flex flex-col items-center">
-          {/* 
-             FIX: We pass courseProgress directly. 
-             In UsersTable, we will filter allProgress to only show this user's data 
-          */}
-          <CourseProgressTooltip 
+          <CourseProgressTooltip
             courseProgress={courseProgress || []}
-            courseProgressByUser={courseProgress || []} 
+            courseProgressByUser={courseProgress || []}
             courseLessonsMap={courseLessonsMap}
             userId={user.id}
           />
@@ -100,8 +105,8 @@ export default function UserRow({
       </td>
 
       <td className="px-6 py-4 text-right">
-        <button 
-          onClick={handleDelete} 
+        <button
+          onClick={handleDelete}
           className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
         >
           <Trash2 size={16} />
