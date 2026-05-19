@@ -73,7 +73,7 @@ export default async function CourseCatalogPage() {
           return (
             <div 
               key={course.id}
-              className="group relative bg-white border border-slate-200 rounded-md p-5 md:p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              className={`group relative bg-white border border-slate-200 rounded-md p-5 md:p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${course.is_locked ? "border-rose-100" : ""}`}
             >
               {isCompleted && (
                 <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-green-500 rounded-full p-1 shadow-lg shadow-green-200 animate-in zoom-in duration-300">
@@ -81,62 +81,74 @@ export default async function CourseCatalogPage() {
                 </div>
               )}
 
-              {/* Lock logic consistent with Dashboard */}
-              {course.is_private && !hasStarted && !isCompleted && (
-                <div className="absolute top-4 right-4 text-slate-400">
-                  <Lock size={14} />
+              <div className="space-y-4 flex flex-col h-full justify-between">
+                <div className={`space-y-4 ${course.is_locked ? "opacity-60" : ""}`}>
+                  <div className="flex justify-between items-start text-slate-300 group-hover:text-[#00ADEF] transition-colors">
+                    <BookOpen size={18} />
+                    {course.is_locked ? (
+                      <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-2 py-0.5 rounded uppercase">
+                        Locked
+                      </span>
+                    ) : hasStarted && !isCompleted && (
+                      <span className="text-[10px] font-bold bg-blue-50 text-[#00ADEF] px-2 py-0.5 rounded uppercase">
+                        In Progress
+                      </span>
+                    )}
+                  </div>
+
+                  <h3 className={`text-lg md:text-xl font-bold text-slate-900 transition-colors leading-tight ${course.is_locked ? "" : "group-hover:text-[#00ADEF]"}`}>
+                    {course.title}
+                  </h3>
+
+                  <p className="text-slate-500 text-sm leading-relaxed line-clamp-3 min-h-[60px]">
+                    {course.description || "Module description is not available."}
+                  </p>
                 </div>
-              )}
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-start text-slate-300 group-hover:text-[#00ADEF] transition-colors">
-                  <BookOpen size={18} />
-                  {hasStarted && !isCompleted && (
-                    <span className="text-[10px] font-bold bg-blue-50 text-[#00ADEF] px-2 py-0.5 rounded uppercase">
-                      In Progress
-                    </span>
-                  )}
-                </div>
-
-                <h3 className="text-lg md:text-xl font-bold text-slate-900 group-hover:text-[#00ADEF] transition-colors leading-tight">
-                  {course.title}
-                </h3>
-
-                <p className="text-slate-500 text-sm leading-relaxed line-clamp-3 min-h-[60px]">
-                  {course.description || "Module description is not available."}
-                </p>
-
-                <Link
-                  href={`/dashboard/courses/${course.id}`}
-                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
-                    isCompleted 
-                    ? "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200" 
-                    : "bg-[#00ADEF] text-white hover:bg-[#0096d1] shadow-lg shadow-[#00ADEF]/10"
-                  }`}
-                >
-                  {isCompleted ? (
-                    <>
-                      <CheckCircle2 size={16} />
-                      <span>Review Content</span>
-                    </>
-                  ) : hasStarted ? (
-                    <>
-                      <ArrowRight size={16} />
-                      <span>Continue Course</span>
-                    </>
+                <div className="pt-2">
+                  {course.is_locked ? (
+                    <button
+                      disabled
+                      className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm bg-rose-50/50 border border-rose-100 text-rose-500 cursor-not-allowed uppercase tracking-wider"
+                    >
+                      <Lock size={16} />
+                      <span>Course Locked</span>
+                    </button>
                   ) : (
-                    <>
-                      <Play size={16} fill="currentColor" />
-                      <span>Start Course</span>
-                    </>
+                    <Link
+                      href={`/dashboard/courses/${course.id}`}
+                      className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+                        isCompleted 
+                        ? "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200" 
+                        : "bg-[#00ADEF] text-white hover:bg-[#0096d1] shadow-lg shadow-[#00ADEF]/10"
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span>Review Content</span>
+                        </>
+                      ) : hasStarted ? (
+                        <>
+                          <ArrowRight size={16} />
+                          <span>Continue Course</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play size={16} fill="currentColor" />
+                          <span>Start Course</span>
+                        </>
+                      )}
+                    </Link>
                   )}
-                </Link>
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
+      {/* --- EMPTY STATE --- */}
       {visibleCourses.length === 0 && (
         <div className="rounded-md border-2 border-dashed border-slate-200 p-12 md:p-20 text-center bg-slate-50/50">
           <p className="text-sm md:text-base text-slate-400 font-semibold uppercase tracking-widest">

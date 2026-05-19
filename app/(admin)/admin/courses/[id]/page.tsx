@@ -1,10 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
-import { Plus, ChevronLeft, Lock, Unlock, ShieldCheck, Mail, BookOpen, Layout } from "lucide-react";
+import { Plus, ChevronLeft, Lock, Unlock, ShieldCheck, Mail, BookOpen, Layout, ShieldAlert } from "lucide-react";
 import LessonActions from "../../_components/LessonActions";
 import QuizManager from "../../_components/QuizManager";
 import PrivacyToggle from "../../_components/PrivacyToggle"; 
 import WhitelistManager from "../../_components/WhitelistManager"; 
+import CourseLockToggle from "../../_components/CourseLockToggle"; // New toggler component
 
 export default async function CourseDetailAdmin({
   params: paramsPromise,
@@ -64,9 +65,14 @@ export default async function CourseDetailAdmin({
                   <Unlock size={12} /> Public
                 </span>
               )}
+              {course?.is_locked && (
+                <span className="flex items-center gap-1.5 text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100 animate-pulse">
+                  <ShieldAlert size={12} /> Course Locked
+                </span>
+              )}
             </div>
             <h1 className="text-4xl font-bold text-slate-900 tracking-tight leading-none">
-              {course?.title || "Course Registry"}
+              {course?.title || "Course Title Not Found"}
             </h1>
             <p className="text-slate-500 text-lg font-medium max-w-3xl">
               {course?.description || "No description available."}
@@ -90,51 +96,66 @@ export default async function CourseDetailAdmin({
         </div>
       </div>
 
-      {/* --- ACCESS CONTROL SECTION --- */}
+      {/* --- ACCESS CONTROL & LOCK STATUS SECTION --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-4 space-y-4">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-6">
-                    <ShieldCheck size={18} className="text-[#00ADEF]" /> 
-                    Access Configuration
-                </h3>
-                <PrivacyToggle courseId={id} isPrivate={course?.is_private || false} />
-                <p className="text-[11px] text-slate-400 mt-4 leading-relaxed font-medium uppercase tracking-tight">
-                    Switching to private restricts access only to whitelisted personnel below.
-                </p>
-            </div>
+        {/* Left Control Column */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Privacy Box */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-6">
+              <ShieldCheck size={18} className="text-[#00ADEF]" /> 
+              Edit Access
+            </h3>
+            <PrivacyToggle courseId={id} isPrivate={course?.is_private || false} />
+            <p className="text-[11px] text-slate-400 mt-4 leading-relaxed font-medium uppercase tracking-tight">
+              Switching to private restricts access only to whitelisted e-mails only. Make sure to add authorized personnel to the whitelist below.
+            </p>
+          </div>
+
+          {/* New Operational Lock Box */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-6">
+              <Lock size={18} className="text-rose-500" /> 
+              Lock Course Access
+            </h3>
+            <CourseLockToggle courseId={id} isLocked={course?.is_locked || false} />
+            <p className="text-[11px] text-slate-400 mt-4 leading-relaxed font-medium uppercase tracking-tight">
+              Locking the course keeps it visible to users, but blocks entry into any lessons or quizzes.
+            </p>
+          </div>
         </div>
 
+        {/* Right Whitelist Column */}
         <div className="lg:col-span-8">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full">
-                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-6">
-                    <Mail size={18} className="text-[#00ADEF]" /> 
-                    Personnel Whitelist
-                </h3>
-                <WhitelistManager 
-                    courseId={id} 
-                    initialWhitelist={course?.course_access || []} 
-                    isPrivate={course?.is_private || false}
-                />
-            </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm h-full">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-6">
+              <Mail size={18} className="text-[#00ADEF]" /> 
+              Employee Whitelist
+            </h3>
+            <WhitelistManager 
+              courseId={id} 
+              initialWhitelist={course?.course_access || []} 
+              isPrivate={course?.is_private || false}
+            />
+          </div>
         </div>
       </div>
 
       {/* --- MODULES & LESSONS LIST --- */}
       <section className="space-y-6 pt-4">
         <div className="flex items-center justify-between border-l-4 border-[#00ADEF] pl-4">
-            <div>
-                <h3 className="font-bold text-slate-900 text-lg tracking-tight">Syllabus Structure</h3>
-                <p className="text-slate-500 text-xs font-medium">Manage modules and lessons order and content delivery.</p>
-            </div>
+          <div>
+            <h3 className="font-bold text-slate-900 text-lg tracking-tight">Syllabus Structure</h3>
+            <p className="text-slate-500 text-xs font-medium">Manage modules and lessons order and content delivery.</p>
+          </div>
         </div>
 
         {!modules || modules.length === 0 ? (
           <div className="border border-slate-200 border-dashed rounded-2xl p-20 text-center bg-slate-50/50">
             <div className="bg-slate-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="text-slate-400" size={24} />
+              <BookOpen className="text-slate-400" size={24} />
             </div>
-            <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Protocol is currently empty</p>
+            <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Syllabus is currently empty</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -144,18 +165,18 @@ export default async function CourseDetailAdmin({
                 <div className="p-5 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100">
                   <div className="flex items-center gap-4">
                     <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-[#00ADEF]/10 border border-[#00ADEF]/20 text-[#00ADEF]">
-                        <span className="text-[9px] font-black leading-none">MOD</span>
-                        <span className="text-sm font-bold leading-none mt-1">
-                            {module.order_index.toString().padStart(2, '0')}
-                        </span>
+                      <span className="text-[9px] font-black leading-none">MOD</span>
+                      <span className="text-sm font-bold leading-none mt-1">
+                        {module.order_index.toString().padStart(2, '0')}
+                      </span>
                     </div>
                     <div>
-                        <span className="block font-bold text-slate-900 text-lg tracking-tight">
-                            {module.title}
-                        </span>
-                        {module.description && (
-                          <span className="text-sm text-slate-500">{module.description}</span>
-                        )}
+                      <span className="block font-bold text-slate-900 text-lg tracking-tight">
+                        {module.title}
+                      </span>
+                      {module.description && (
+                        <span className="text-sm text-slate-500">{module.description}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -170,15 +191,15 @@ export default async function CourseDetailAdmin({
                       >
                         <div className="flex items-center gap-6">
                           <div className="flex flex-col items-center justify-center w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 text-slate-400 group-hover:bg-slate-100 transition-all">
-                              <span className="text-xs font-bold leading-none">
-                                  {lesson.order_index.toString().padStart(2, '0')}
-                              </span>
+                            <span className="text-xs font-bold leading-none">
+                              {lesson.order_index.toString().padStart(2, '0')}
+                            </span>
                           </div>
                           <div>
-                              <span className="block font-semibold text-slate-900 text-base tracking-tight group-hover:text-[#00ADEF] transition-colors">
-                                  {lesson.title}
-                              </span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {lesson.id.split('-')[0]}</span>
+                            <span className="block font-semibold text-slate-900 text-base tracking-tight group-hover:text-[#00ADEF] transition-colors">
+                              {lesson.title}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {lesson.id.split('-')[0]}</span>
                           </div>
                         </div>
 
@@ -204,18 +225,17 @@ export default async function CourseDetailAdmin({
       {/* --- FINAL ASSESSMENT SECTION --- */}
       <div className="pt-8">
         <div className="bg-slate-900 rounded-3xl p-8 md:p-12 text-white overflow-hidden relative shadow-xl shadow-slate-200">
-            <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                    <Layout size={18} className="text-[#00ADEF]" />
-                    <span className="text-xs font-bold uppercase tracking-tight text-slate-400">Final Assessment</span>
-                </div>
-                <h3 className="text-3xl font-bold mb-8 tracking-tight">Quiz Management</h3>
-                <div className="bg-white/5 p-1 rounded-2xl border border-white/10">
-                    <QuizManager courseId={id} />
-                </div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-4">
+              <Layout size={18} className="text-[#00ADEF]" />
+              <span className="text-xs font-bold uppercase tracking-tight text-slate-400">Final Assessment</span>
             </div>
-            {/* Subtle background decoration */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#00ADEF] opacity-5 blur-[120px] -mr-32 -mt-32" />
+            <h3 className="text-3xl font-bold mb-8 tracking-tight">Quiz Management</h3>
+            <div className="bg-white/5 p-1 rounded-2xl border border-white/10">
+              <QuizManager courseId={id} />
+            </div>
+          </div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#00ADEF] opacity-5 blur-[120px] -mr-32 -mt-32" />
         </div>
       </div>
     </div>

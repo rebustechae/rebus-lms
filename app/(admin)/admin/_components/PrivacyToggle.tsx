@@ -54,7 +54,7 @@ export default function PrivacyToggle({ courseId, isPrivate }: { courseId: strin
             <p className={`text-xs font-bold uppercase tracking-wider ${
               isPrivate ? 'text-amber-700' : 'text-emerald-700'
             }`}>
-              {isPrivate ? 'Restricted Access' : 'Internal Public'}
+              {isPrivate ? 'Restricted Access' : 'Public Access'}
             </p>
             <p className="text-[10px] font-medium text-slate-500 mt-0.5">
               {isPrivate ? 'Only whitelisted users can view' : 'Visible to all registered personnel'}

@@ -94,27 +94,35 @@ export default async function DashboardPage() {
   const totalLessonsCompleted = userProgress?.length || 0;
 
   const CourseCard = ({ course }: { course: any }) => (
-    <div className="group relative bg-white border border-slate-200 rounded-md p-6 shadow-sm hover:shadow-xl hover:border-[#00ADEF]/30 transition-all duration-300 flex flex-col h-full">
+    <div className={`group relative bg-white border border-slate-200 rounded-md p-6 shadow-sm hover:shadow-xl hover:border-[#00ADEF]/30 transition-all duration-300 flex flex-col h-full ${course.is_locked ? "border-rose-100" : ""}`}>
       {/* 1. Removed the absolute div from here to prevent overlap */}
 
-      <div className="space-y-4 flex flex-col h-full">
+      <div className={`space-y-4 flex flex-col h-full ${course.is_locked ? "opacity-60" : ""}`}>
         <div className="flex items-center justify-between">
           <span
             className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest ${
-              course.isFulllyCompleted
-                ? "bg-emerald-50 text-emerald-600"
-                : "bg-slate-100 text-slate-500"
+              course.is_locked
+                ? "bg-rose-50 text-rose-600"
+                : course.isFulllyCompleted
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-slate-100 text-slate-500"
             }`}
           >
-            {course.isFulllyCompleted
-              ? "Completed"
-              : `${course.progressPercent}% Progress`}
+            {course.is_locked
+              ? "Locked"
+              : course.isFulllyCompleted
+                ? "Completed"
+                : `${course.progressPercent}% Progress`}
           </span>
 
           {/* 2. Unified the Right Side Icons */}
           <div className="flex items-center gap-3">
-            {/* Show Lock if private, or Check if completed */}
-            {course.is_private &&
+            {/* Show Lock if explicitly locked, private, or Check if completed */}
+            {course.is_locked ? (
+              <div className="text-rose-500 bg-rose-50 p-1 rounded-full">
+                <Lock size={16} />
+              </div>
+            ) : course.is_private &&
             !course.hasStarted &&
             !course.isFulllyCompleted ? (
               <div className="text-slate-300">
@@ -137,7 +145,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex-1 pt-2">
-          <h4 className="text-xl font-bold text-slate-900 group-hover:text-[#00ADEF] transition-colors leading-tight">
+          <h4 className={`text-xl font-bold text-slate-900 transition-colors leading-tight ${course.is_locked ? "" : "group-hover:text-[#00ADEF]"}`}>
             {course.title}
           </h4>
           <p className="mt-2 text-slate-500 text-sm leading-relaxed line-clamp-2">
@@ -148,27 +156,39 @@ export default async function DashboardPage() {
         {!course.isFulllyCompleted && (
           <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mt-4">
             <div
-              className="h-full bg-[#00ADEF] rounded-full transition-all duration-1000"
+              className={`h-full rounded-full transition-all duration-1000 ${course.is_locked ? "bg-rose-400" : "bg-00ADEF"}`}
               style={{ width: `${course.progressPercent}%` }}
             />
           </div>
         )}
+      </div>
 
-        <Link
-          href={`/dashboard/courses/${course.id}`}
-          className={`flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-sm transition-all mt-2 ${
-            course.isFulllyCompleted
-              ? "bg-slate-50 text-slate-600 hover:bg-slate-100"
-              : "bg-[#00ADEF] text-white hover:bg-[#00ADEF]/80 shadow-lg shadow-slate-200 active:scale-95"
-          }`}
-        >
-          {course.isFulllyCompleted
-            ? "Review"
-            : course.hasStarted
-              ? "Resume"
-              : "Start"}
-          <ArrowRight size={16} />
-        </Link>
+      <div className="mt-4">
+        {course.is_locked ? (
+          <button
+            disabled
+            className="flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-sm bg-rose-50/50 border border-rose-100 text-rose-500 cursor-not-allowed uppercase tracking-wider"
+          >
+            Course Locked
+            <Lock size={16} />
+          </button>
+        ) : (
+          <Link
+            href={`/dashboard/courses/${course.id}`}
+            className={`flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-sm transition-all ${
+              course.isFulllyCompleted
+                ? "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                : "bg-[#00ADEF] text-white hover:bg-[#00ADEF]/80 shadow-lg shadow-slate-200 active:scale-95"
+            }`}
+          >
+            {course.isFulllyCompleted
+              ? "Review"
+              : course.hasStarted
+                ? "Resume"
+                : "Start"}
+            <ArrowRight size={16} />
+          </Link>
+        )}
       </div>
     </div>
   );

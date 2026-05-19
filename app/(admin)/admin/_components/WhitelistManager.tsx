@@ -57,7 +57,7 @@ export default function WhitelistManager({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter personnel email address..."
+            placeholder="Enter employee email address..."
             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pl-11 text-sm font-medium outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all"
           />
         </div>
@@ -74,8 +74,8 @@ export default function WhitelistManager({
       {/* WHITELIST ENTRIES */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Authorized Personnel</span>
-            <span className="text-[10px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">{initialWhitelist.length} Units</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Authorized Employees</span>
+            <span className="text-[10px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">{initialWhitelist.length} people</span>
         </div>
 
         <div className="flex flex-wrap gap-2">

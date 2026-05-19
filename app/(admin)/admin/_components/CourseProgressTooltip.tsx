@@ -71,10 +71,10 @@ export default function CourseProgressTooltip({
             className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white border border-slate-200 rounded-[2rem] shadow-2xl p-8 w-[400px] z-50 max-h-[80vh] overflow-y-auto">
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white border border-slate-200 rounded-lg shadow-2xl p-8 w-[400px] z-50 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#662D91]">
-                Personnel Certification
+              <div className="text-sm font-semibold uppercase text-[#662D91]">
+                Course Progress
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -87,13 +87,13 @@ export default function CourseProgressTooltip({
             <div className="space-y-6">
               {coursesWithProgress.map((course) => (
                 <div key={course.id} className="group">
-                  <div className="flex justify-between items-end mb-2">
+                  <div className="flex justify-between items-end mb-1">
                     <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-900 uppercase leading-tight">{course.title}</span>
+                        <span className="text-xs font-bold text-slate-900 uppercase leading-tight mb-1">{course.title}</span>
                         <span className="text-[10px] font-bold text-[#00ADEF]">{course.percentage}% Complete</span>
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded">
-                      {course.completed} / {course.total} LESSONS
+                    <span className="text-[10px] font-mono font-bold text-slate-400 px-2 py-1 rounded">
+                      {course.completed} / {course.total}
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
