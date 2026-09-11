@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { notFound } from "next/navigation";
 import { ChevronLeft, Award, BarChart3, Calendar } from "lucide-react";
 import Link from "next/link";
 import DownloadResultsPDF from "../../../_components/DownloadResultsPDF";
@@ -12,11 +13,16 @@ export default async function CourseResultsPage({
   const supabase = await createClient();
 
   // 1. Fetch Course Title
-  const { data: course } = await supabase
+  const { data: course, error: courseError } = await supabase
     .from("courses")
     .select("title")
     .eq("id", id)
-    .single();
+    .maybeSingle();
+
+  if (courseError || !course) {
+    console.error("ADMIN_RESULTS: Course Fetch Error:", courseError?.message ?? "Course not found");
+    notFound();
+  }
 
   // 2. Fetch Attempts with synchronized Profile data
   const { data: rawAttempts, error: attemptError } = await supabase
