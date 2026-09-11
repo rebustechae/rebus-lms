@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, LayoutDashboard, Compass } from "lucide-react";
+import { LayoutDashboard, BookOpenText } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -19,7 +19,7 @@ export default function SidebarNav({ isCollapsed }: SidebarNavProps) {
 
   const navItems = [
     { name: "My Learning", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Explore Courses", href: "/dashboard/courses", icon: Compass },
+    { name: "Course Library", href: "/dashboard/courses", icon: BookOpenText },
   ];
 
   return (

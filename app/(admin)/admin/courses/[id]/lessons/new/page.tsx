@@ -79,7 +79,7 @@ export default function NewLessonPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 p-8">
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 font-bold">
+      <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-500 font-bold hover:text-rebus-blue">
         <ChevronLeft size={16} /> Back
       </button>
 
@@ -122,7 +122,7 @@ export default function NewLessonPage({ params }: { params: Promise<{ id: string
                   <label className="cursor-pointer">
                     <input type="file" accept=".vtt" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'captions')} />
                     <CaptionsIcon className="mx-auto mb-2 text-slate-400" />
-                    <span className="text-xs font-bold text-slate-500">Upload VTT</span>
+                    <span className="text-xs font-bold text-slate-500">Upload Captions (.vtt)</span>
                   </label>
                 )}
               </div>
@@ -146,7 +146,7 @@ export default function NewLessonPage({ params }: { params: Promise<{ id: string
           )}
         </div>
 
-        <button disabled={loading || uploading} className="w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center">
+        <button disabled={loading || uploading} className="w-full bg-black text-white p-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center hover:bg-gray-900 transition-colors disabled:opacity-50">
           {loading ? <Loader2 className="animate-spin" /> : "Save Lesson"}
         </button>
       </form>

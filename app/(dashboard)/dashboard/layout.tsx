@@ -11,7 +11,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
-  X,
   User,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
@@ -97,7 +96,6 @@ export default function DashboardLayout({
         className={`
     fixed lg:relative top-0 h-screen bg-white border-slate-200 flex flex-col transition-all duration-300 ease-in-out z-[70]
     right-0 lg:left-0 lg:border-r shrink-0
-    /* ADDED: overflow-x-hidden here */
     overflow-x-hidden 
     ${isMobileMenuOpen ? "translate-x-0 w-72 border-l shadow-2xl" : "translate-x-full lg:translate-x-0"}
     ${isCollapsed ? "lg:w-20" : "lg:w-64"}
@@ -110,7 +108,6 @@ export default function DashboardLayout({
     ${isCollapsed ? "py-8" : "py-6"}
   `}
         >
-          {/* ADDED: w-full and overflow-hidden on the inner container */}
           <div
             className={`flex items-center w-full px-6 overflow-hidden ${isCollapsed ? "flex-col gap-6 px-2" : "justify-between"}`}
           >
@@ -141,13 +138,12 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation Links */}
-        {/* ADDED: overflow-x-hidden here as well */}
         <div className="flex-1 py-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          <div className="px-4 mb-4">
+          <div className={`${isCollapsed ? "px-0" : "px-4"} mb-4`}>
             <Link
               href="/dashboard/profile"
-              className={`flex items-center gap-3 p-2 rounded-md hover:bg-slate-50 transition-all ${
-                isCollapsed ? "justify-center px-0" : ""
+              className={`flex items-center rounded-md hover:bg-slate-50 transition-all ${
+                isCollapsed ? "justify-center p-2" : "gap-3 p-2"
               }`}
             >
               <div className="relative flex-shrink-0">
@@ -166,17 +162,16 @@ export default function DashboardLayout({
                 )}
               </div>
 
-              {/* Use hidden class instead of conditional rendering for smoother transition */}
-              <div
-                className={`flex flex-col min-w-0 transition-opacity duration-200 ${isCollapsed ? "w-0 h-0 opacity-0 overflow-hidden" : "opacity-100"}`}
-              >
-                <span className="text-sm font-bold text-slate-900 truncate">
-                  {userData?.name}
-                </span>
-                <span className="text-[10px] font-medium text-slate-400 truncate uppercase tracking-wider">
-                  View Profile
-                </span>
-              </div>
+              {!isCollapsed && (
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-bold text-slate-900 truncate">
+                    {userData?.name || "User"}
+                  </span>
+                  <span className="text-xs font-medium text-slate-400 truncate uppercase tracking-widest">
+                    View Profile
+                  </span>
+                </div>
+              )}
             </Link>
           </div>
 
@@ -190,8 +185,8 @@ export default function DashboardLayout({
             <button
               className={`flex items-center gap-3 text-sm font-bold text-slate-400 hover:text-red-500 transition-all ${
                 isCollapsed
-                  ? "justify-center p-0"
-                  : "px-4 py-3 w-full hover:bg-red-50 rounded-2xl"
+                  ? "w-full justify-center py-3"
+                  : "w-full px-4 py-3 hover:bg-red-50 rounded-2xl"
               }`}
             >
               <LogOut size={20} className="shrink-0" />
@@ -206,7 +201,6 @@ export default function DashboardLayout({
       </aside>
 
       {/* --- MAIN CONTENT AREA --- */}
-      {/* FIX 4: h-full and overflow-y-auto makes the content scrollable while the sidebar stays fixed */}
       <main className="flex-1 h-full overflow-y-auto pt-16 lg:pt-0">
         <div className="p-6 lg:p-10 max-w-6xl mx-auto">{children}</div>
       </main>

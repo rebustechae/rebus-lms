@@ -2,6 +2,11 @@ import { createClient } from "@/utils/supabase/server";
 import { BookOpen, Play, CheckCircle2, Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+export const metadata = {
+  title: 'Course Library | Rebus LMS',
+  description: 'Explore the courses we offer to enhance your skills.'
+}
+
 export default async function CourseCatalogPage() {
   const supabase = await createClient();
 
@@ -152,7 +157,7 @@ export default async function CourseCatalogPage() {
       {visibleCourses.length === 0 && (
         <div className="rounded-md border-2 border-dashed border-slate-200 p-12 md:p-20 text-center bg-slate-50/50">
           <p className="text-sm md:text-base text-slate-400 font-semibold uppercase tracking-widest">
-            No authorized courses available.
+            No courses available.
           </p>
         </div>
       )}

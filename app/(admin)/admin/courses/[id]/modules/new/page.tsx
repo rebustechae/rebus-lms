@@ -57,7 +57,7 @@ export default function NewModulePage({ params }: { params: Promise<{ id: string
         
         {/* METADATA SECTION */}
         <div className="space-y-4">
-          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+          <label className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2">
             <Hash size={14} className="text-[#00ADEF]" /> Module Metadata
           </label>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -66,7 +66,7 @@ export default function NewModulePage({ params }: { params: Promise<{ id: string
                 name="title" 
                 required 
                 placeholder="MODULE TITLE (e.g., Safety Fundamentals)" 
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
               />
             </div>
             <div className="group">
@@ -75,7 +75,7 @@ export default function NewModulePage({ params }: { params: Promise<{ id: string
                 type="number" 
                 required
                 placeholder="MODULE #" 
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 font-bold text-slate-900 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all" 
               />
             </div>
           </div>
@@ -83,14 +83,14 @@ export default function NewModulePage({ params }: { params: Promise<{ id: string
 
         {/* DESCRIPTION SECTION */}
         <div className="space-y-4">
-          <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+          <label className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 flex items-center gap-2">
             <FileText size={14} className="text-[#00ADEF]" /> Module Description
           </label>
           <div className="relative group">
             <textarea
                 name="description"
                 rows={6}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-6 font-mono text-sm leading-relaxed text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all resize-none shadow-inner"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm leading-relaxed text-slate-700 outline-none focus:bg-white focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00ADEF] transition-all resize-none shadow-inner"
                 placeholder="Brief description of what this module covers (optional)..."
             />
           </div>
@@ -100,7 +100,7 @@ export default function NewModulePage({ params }: { params: Promise<{ id: string
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full bg-slate-900 text-white p-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all flex justify-center items-center gap-3 shadow-lg shadow-slate-200 group"
+          className="w-full bg-slate-900 text-white p-5 rounded-xl font-bold uppercase text-xs hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 transition-all flex justify-center items-center gap-3 shadow-lg shadow-slate-200 group"
         >
           {loading ? (
             <Loader2 className="animate-spin" size={18} />

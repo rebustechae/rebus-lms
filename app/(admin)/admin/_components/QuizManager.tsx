@@ -75,15 +75,12 @@ export default function QuizManager({
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-100 tracking-tight">
-              Assessment Registry
+              Question List
             </h3>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-              Knowledge Verification Protocols
-            </p>
           </div>
         </div>
         <div className="text-[10px] font-black bg-slate-100 px-3 py-1 rounded-full uppercase text-slate-500">
-            {questions.length} Questions Active
+            {questions.length} questions
         </div>
       </div>
 
